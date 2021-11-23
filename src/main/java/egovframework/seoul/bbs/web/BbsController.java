@@ -175,4 +175,6 @@ public class BbsController {
 		bbsService.delete(bbs_no);
 		return "redirect:/bbs/list.do";
 	}
+	// 그냥 수정해봄
+	
 }
