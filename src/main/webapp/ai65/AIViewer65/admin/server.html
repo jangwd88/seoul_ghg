@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <!--<script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>-->
+  <script type="text/javascript">
+      var $itemList;
+      var comments = [ // 서버에서 출력항목의 순서와 동기화
+          "운영체제 이름 / 버전", "사용중인 Java의 버전 / 벤더",
+          "사용중인 Java의 실제경로", "WAS 제품명 / 버전",
+          "WAS가 지원하는 Servlet버전", "AIReport가 구동되는 Context의 경로",
+          "서버 도메인명 (Request주소)", "서버 IP주소", "서버 Mac주소"
+      ];
+
+      $(function () {
+          $itemList = $(document.getElementById("itemList"));
+
+          parent.simpleRequest.setTask("server", "info", "list");
+          parent.simpleRequest.doRequest("GET", null, dataLoaded, 30000, "xml");
+      });
+
+      function dataLoaded(xml) {
+          $itemList.css("display", "none");
+
+          var infoList = $(xml).find("Info");
+          infoList.each(function(index) {
+              var comment = comments[index] || "";
+              var row = "<tr><td>" + $(this).attr("k") +
+                        "</td><td>" + $(this).attr("v") +
+                        "</td><td>" + comment + "</td></tr>";
+              if (index == 5) { // contextHome 다음에 설명/구분 row추가
+                  row += ("<tr><td colspan='3' height='40'><span style='color:#28a4c9;font-size:1.1em;'>서버주소 정보 (라이센스관련)</span></td></tr>");
+              }
+
+              $itemList.append(row);
+          });
+
+          $itemList.css("display", "table");
+      }
+  </script>
+</head>
+<body>
+
+  <div class="page-header" style="margin:20px 10px;">
+    <h1><small>기본정보</small></h1>
+  </div>
+
+  <div style="margin:10px;">
+    <table id="itemList" class="table table-hover">
+      <thead><tr><th>항목</th><th style="width:60%;">값</th><th>비고</th></tr></thead>
+    </table>
+  </div>
+
+</body>
+</html>

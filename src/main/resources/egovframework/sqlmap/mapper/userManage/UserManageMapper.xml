@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="userManageMapper">
+	
+	<select id="selectOfficerCodeList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT *
+		  FROM OFFICER_CODE
+		 ORDER BY OFFICER_CD
+	</select>
+	
+	<select id="userManage_search" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			A.ADMIN_ID,
+			A.NAME,
+			A.PASSWORD,
+			NVL(A.INSTITUTION, ' ') AS INSTITUTION,
+			NVL(B.OFFICER_NM, ' ') AS INSTITUTION_NM,
+			NVL(A.AUTH_INFO, ' ') AS AUTH_INFO,
+			NVL(C.S_DESC, ' ') AS AUTH_INFO_NM,
+			NVL(A.EMAIL, ' ') AS EMAIL,
+			NVL(A.TEL, ' ') AS TEL,
+			A.REG_STATUS,
+			D.S_DESC AS REG_STATUS_NM,
+			A.FG_DEL,
+			A.LAST_LOGIN_DATE,
+			NVL(A.MEMO, ' ') AS MEMO,
+			TO_CHAR(A.D_REG_DATE, 'YYYY-MM-DD') AS D_REG_DATE
+		FROM
+			USER_INFO A,
+			OFFICER_CODE B,
+			(
+			SELECT
+				*
+			FROM
+				T_CODE
+			WHERE
+				S_CAT = 'AUTH_INFO') C,
+			(
+			SELECT
+				*
+			FROM
+				T_CODE
+			WHERE
+				S_CAT = 'REG_STATUS') D
+		WHERE
+			A.INSTITUTION = B.OFFICER_CD(+)
+			AND A.AUTH_INFO = C.S_CD(+)
+			AND A.REG_STATUS = D.S_CD(+)
+			AND A.FG_DEL = 'N'
+			AND A.NAME LIKE '%' || #{NAME} || '%'
+		ORDER BY 
+			A.ADMIN_ID ASC
+	</select>
+	
+	<insert id="userManage_create" parameterType="java.util.HashMap">
+		INSERT
+			INTO
+			USER_INFO (ADMIN_ID,
+			NAME,
+			PASSWORD,
+			INSTITUTION,
+			AUTH_INFO,
+			EMAIL,
+			TEL,
+			REG_STATUS,
+			FG_DEL,
+			LAST_LOGIN_DATE,
+			MEMO,
+			S_REG_ID,
+			D_REG_DATE,
+			S_MOD_ID,
+			D_MOD_DATE)
+		VALUES(#{ADMIN_ID},
+			#{NAME},
+			#{PASSWORD},
+			#{INSTITUTION},
+			NULL,
+			NVL(#{EMAIL}, ''),
+			NVL(#{TEL}, ''),
+			#{REG_STATUS},
+			'N',
+			NULL,
+			NVL(#{MEMO}, ''),
+			'admin',
+			SYSDATE,
+			NULL,
+			NULL)
+	</insert>
+	
+	<update id="userManage_delete" parameterType="java.util.HashMap">
+		UPDATE USER_INFO
+		   SET FG_DEL = 'Y',
+				S_MOD_ID = 'admin',
+				D_MOD_DATE = SYSDATE
+		 WHERE ADMIN_ID = #{ADMIN_ID}
+	</update>
+	
+	<update id="userManage_update" parameterType="java.util.HashMap">
+		UPDATE USER_INFO
+		   SET NAME = #{NAME},
+				INSTITUTION = #{INSTITUTION},
+				EMAIL = #{EMAIL},
+				TEL = #{TEL},
+				REG_STATUS = #{REG_STATUS},
+				FG_DEL = #{FG_DEL},
+				MEMO = #{MEMO},
+				S_MOD_ID = 'admin',
+				D_MOD_DATE = SYSDATE
+		 WHERE ADMIN_ID = #{ADMIN_ID}
+	</update>
+	
+	<update id="userManage_initPassword" parameterType="java.util.HashMap">
+		UPDATE USER_INFO
+		   SET PASSWORD = #{PASSWORD},
+				S_MOD_ID = 'admin',
+				D_MOD_DATE = SYSDATE
+		 WHERE ADMIN_ID = #{ADMIN_ID}
+	</update>
+	
+</mapper>

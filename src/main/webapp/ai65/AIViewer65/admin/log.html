@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <!--<script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>-->
+  <script type="text/javascript">
+      var year, month, day;
+
+      $(function () {
+          parent.simpleRequest.setTask("server", "info", "logFile");
+          parent.simpleRequest.doRequest("GET", null, dataLoaded, 30000, "text");
+      });
+
+      function dataLoaded(content, jqXHR) {
+          if (!year) {
+              setDateFields();
+          }
+
+          var logTypePath = jqXHR.getResponseHeader("AIServer-LogTypePath");
+          logTypePath = window.decodeURIComponent(logTypePath);
+          var idx = logTypePath.indexOf(";", 0);
+          var desc = "로깅유형: ";
+          var logType = logTypePath;
+          if (idx != -1) logType = logTypePath.substring(0, idx);
+
+          if (logType == "FileLoggerHandler") {
+              desc += "AI로깅";
+          } else if (logType == "SLF4JLoggerHandler") {
+              desc += "AI로깅";
+          } else if (logType == "Log4jIntegrator") {
+              desc += "Log4J로깅";
+          } else { // NullLoggerHandler
+              desc += "AI콘솔로깅";
+          }
+
+          var comment = document.getElementById("comment");
+          comment.style.display = "inline";
+
+          if (idx == -1) { // 로그화일없음
+              $(comment).text(desc + ",  로그화일: 없음");
+              $(document.getElementById("logContent")).text("로그화일 없음");
+          } else {
+              $(comment).text(desc + ",  로그화일: " + logTypePath.substring(idx+1));
+              if (!content) content = "전송 에러";
+              $(document.getElementById("logContent")).text(content);
+          }
+
+          $("html, body").animate({scrollTop:$(document).height()}, "fast");
+      }
+
+      function viewLogFile() {
+          var paramObj = {};
+          var valid = true;
+
+          var form = document.getElementById("logForm");
+          var v = $.trim(form.year.value);
+          if (v.length == 4) {
+              paramObj.year = v;
+          } else {
+              valid = false;
+          }
+          if (valid) {
+              v = $.trim(form.month.value);
+              if (v.length == 1) v = "0" + v;
+              if (v.length == 2) {
+                  paramObj.month = v;
+              } else {
+                  valid = false;
+              }
+          }
+          if (valid) {
+              v = $.trim(form.day.value);
+              if (v.length == 1) v = "0" + v;
+              if (v.length == 2) {
+                  paramObj.day = v;
+              } else {
+                  valid = false;
+              }
+          }
+          if (!valid) {
+              alert("로그 조회 일자를 정확히 입력하세요.");
+              return;
+          }
+
+          if (paramObj.year == year &&
+              paramObj.month == month &&
+              paramObj.day == day) {
+              paramObj = {}; // 서버에서 그냥 오늘일자로 처리하기 위함
+          }
+          paramObj.tailOnly = (form.tailOnly.checked)? "true" : "false";
+
+          parent.simpleRequest.setTask("server", "info", "logFile");
+          parent.simpleRequest.doRequest("GET", paramObj, dataLoaded, 30000, "text");
+      }
+
+      function setDateFields() {
+          var today = new Date();
+          year = today.getFullYear();
+          month = "" + (today.getMonth()+1);
+          if (month.length == 1) month = "0" + month;
+          day = "" + today.getDate();
+          if (day.length == 1) day = "0" + day;
+
+          var form = document.getElementById("logForm");
+          form.year.value = year;
+          form.month.value = month;
+          form.day.value = day;
+      }
+  </script>
+</head>
+<body>
+
+  <div class="page-header" style="margin:20px 10px;">
+    <h1><small>로그화일</small></h1>
+    <div id="comment" style="display:none;"></div>
+    <form id="logForm" class="form-inline" style="margin-top:10px;">
+      <label style="margin-right:30px;">날짜 선택</label>
+      <input name="year" type="text" class="form-control" maxlength="4" size="4"><label>&nbsp;년</label>
+      <input name="month" type="text" class="form-control" maxlength="2" style="width:50px;margin-left:15px;"><label>&nbsp;월</label>
+      <input name="day" type="text" class="form-control" maxlength="2" style="width:50px;margin-left:15px;"><label>&nbsp;일</label>
+      <input name="tailOnly" type="checkbox" checked style="margin-left:25px;"> 끝부분만 보기
+      <button type="button" style="margin-left:25px;" class="btn btn-success" onclick="viewLogFile()">조회</button>
+    </form>
+  </div>
+
+  <div style="margin:20px 10px 10px 10px;">
+    <!--<textarea id="logContent" class="form-control" readonly style="" rows="30"></textarea>-->
+    <pre id="logContent" style="word-wrap:break-word;"></pre>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="specMapper">
+
+	<select id="getList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		/*+INDEX(A INDEX_DATE A INDEX_ARCH A INDEX_AREA  A INDEX_TOTAREA) */ 
+			MAIN_PURPS_NM
+			,TOTAREA
+			,YEAR
+			,MONTH
+			,ENERGY_TYPE
+			,TOE
+			,TCO2EQ
+			,SIGUNGU_NM
+			,BJDONG_NM
+			,PROP_OFFICER
+		FROM
+			ENERGY_LEDGER
+	</select>
+	
+	<select id="listEmd" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT 
+			ADMIN_CD		AS "admin_cd"
+			, ADMIN_CD_SD	AS "admin_cd_sd"
+			, ADMIN_CD_SGG	AS "admin_cd_sgg"
+			, ADMIN_CD_EMD	AS "admin_cd_emd"
+			, ADMIN_NM_SD	AS "admin_nm_sd"
+			, ADMIN_NM_SGG	AS "admin_nm_sgg"
+			, ADMIN_NM_EMD	AS "admin_nm_emd"
+		FROM
+			ADMIN_CODE
+		WHERE
+			ADMIN_CD_SGG = #{admin_cd_sgg }
+	</select>
+	
+	<select id="specArchList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+	  		ENERGY_TYPE 				AS "energy_type"
+	  		, ROUND(SUM(ENERGY_USE), 2) AS "energy_use_sum"
+		    , ROUND(SUM(TCO2EQ), 2) 	AS "tco2eq_sum"
+	  	FROM
+	  		<if test='energy_target == "target_first" '>
+	  			SEOUL_OWN_TARGET_1 A, SEOUL_OWN_TARGET_1_ENERGY_LEDGER_RENEW B
+	  		</if>
+			<if test='energy_target == "target_second" '>
+				SEOUL_OWN_TARGET_2 A, SEOUL_OWN_TARGET_2_ENERGY_LEDGER_RENEW B
+			</if>
+	  	WHERE
+	  		A.MGM_BLD_PK = B.MGM_BLD_PK
+	  	AND
+	  		B.YEAR = '2020'
+	  	<if test='energy_type_electric == "Y" and energy_type_gas == "Y" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE IN ('전기', '가스', '지역난방')
+		</if>
+		<if test='energy_type_electric == "N" and energy_type_gas == "Y" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE IN ('가스', '지역난방')
+		</if>
+		<if test='energy_type_electric == "Y" and energy_type_gas == "N" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE IN ('전기', '지역난방')
+		</if>
+		<if test='energy_type_electric == "Y" and energy_type_gas == "Y" and energy_type_local == "N"'>
+			AND B.ENERGY_TYPE IN ('전기', '가스')
+		</if>
+		<if test='energy_type_electric == "N" and energy_type_gas == "N" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE = '지역난방'
+		</if>
+		<if test='energy_type_electric == "N" and energy_type_gas == "Y" and energy_type_local == "N"'>
+			AND B.ENERGY_TYPE = '가스'
+		</if>
+		<if test='energy_type_electric == "Y" and energy_type_gas == "N" and energy_type_local == "N"'>
+			AND B.ENERGY_TYPE = '전기'
+		</if>
+	  	<if test='conditionFlag == "build" '>
+			AND	A.CONS_NM IN 
+			<foreach collection="codeList" item="item" index="index" separator="," open="(" close=")">
+	        	#{item}
+	       	</foreach>
+		</if>
+		<if test='conditionFlag == "officer" '>
+			AND	A.PROP_OFFICER IN 
+			<foreach collection="codeList" item="item" index="index" separator="," open="(" close=")">
+	        	#{item}
+	       	</foreach>
+		</if>
+		<if test='conditionFlag == "type" '>
+			AND A.MAIN_PURPS_CD IN 
+			<foreach collection="codeList" item="item" index="index" separator="," open="(" close=")">
+	       		#{item}
+	       	</foreach>
+		</if>
+		GROUP BY 
+			B.ENERGY_TYPE
+	</select>	
+	
+	<select id="listSpecArch" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+  			TARGET_NUM 	AS "target_num"
+			, GIS_PK		AS "gis_pk"
+			, MGM_BLD_PK	AS "mgm_bld_pk"
+			, CONS_NM		AS "cons_nm"
+			, JUSO			AS "juso"
+			, SIGUNGU_NM	AS "sigungu_nm"
+			, BJDONG_NM		AS "bjdong_nm"
+			, TOTAREA		AS "totarea"
+			, MAIN_PURPS_NM	AS "main_purps_nm"
+			, MAIN_PURPS_CD	AS "main_purps_cd"
+			, PROP_OFFICER	AS "prop_officer"
+			, USEAPR_DAY	AS "useapr_day"
+			, X				AS "x"
+			, Y				AS "y"
+			, ALLOW_2025	AS "allow_2025"
+			, EMISS_2025	AS "emiss_2025"
+			, REDUC_2025	AS "reduc_2025"
+	  	FROM
+	  		<if test='energy_target == "target_first" '>
+	  			SEOUL_OWN_TARGET_1 A
+	  		</if>
+			<if test='energy_target == "target_second" '>
+				SEOUL_OWN_TARGET_2 A
+			</if>
+	  	WHERE
+	  		1=1
+	  	<if test='conditionFlag == "build" '>
+			AND	A.CONS_NM IN 
+			<foreach collection="codeList" item="item" index="index" separator="," open="(" close=")">
+	        	#{item}
+	       	</foreach>
+		</if>
+		<if test='conditionFlag == "officer" '>
+			AND	A.PROP_OFFICER IN 
+			<foreach collection="codeList" item="item" index="index" separator="," open="(" close=")">
+	        	#{item}
+	       	</foreach>
+		</if>
+		<if test='conditionFlag == "type" '>
+			AND A.MAIN_PURPS_CD IN 
+			<foreach collection="codeList" item="item" index="index" separator="," open="(" close=")">
+	       		#{item}
+	       	</foreach>
+		</if>
+	</select>	
+	
+	<select id="listOfficer" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			OFFICER_NM	AS "officer_nm"
+		FROM
+			OFFICER_CODE
+	</select>
+	
+	<select id="listCons" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			A.CONS_NM	AS "cons_nm"
+			, B.JUSO	AS "juso"
+		FROM
+			CONS_CODE A, SEOUL_OWN_TARGET_2 B
+		WHERE
+			A.TARGET_NUM = B.TARGET_NUM
+		<if test='energy_target == "target_first" '>
+			AND A.FIRST_TARGET = 'Y'
+		</if>
+		<if test='energy_target == "target_second" '>
+			AND A.SECOND_TARGET = 'Y'
+		</if>
+			AND A.CONS_NM IS NOT NULL
+	</select>
+
+	<select id="selectOfficerList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			OFFICER_NM	AS "officer_nm"
+		FROM
+			OFFICER_CODE
+		WHERE
+			OFFICER_NM like '%'||#{officer_nm}||'%'
+	</select>
+	
+	<select id="selectConsList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			A.CONS_NM	AS "cons_nm"
+			, B.JUSO	AS "juso"
+		FROM
+			CONS_CODE A, SEOUL_OWN_TARGET_2 B
+		WHERE
+			A.TARGET_NUM = B.TARGET_NUM
+		AND
+			A.CONS_NM like '%'||#{cons_nm }||'%'
+		<if test='energy_target == "target_first" '>
+			AND A.FIRST_TARGET = 'Y'
+		</if>
+		<if test='energy_target == "target_second" '>
+			AND A.SECOND_TARGET = 'Y'
+		</if>
+			AND A.CONS_NM IS NOT NULL
+	</select>
+	
+	<select id="getTotalAmtTarget" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			CODE_03 AS "code_03"
+			, CODE_04 AS "code_04"
+			, CODE_07 AS "code_07"
+			, CODE_14 AS "code_14"
+			, CODE_10 AS "code_10"
+			, CODE_11 AS "code_11"
+			, CODE_05 AS "code_05"
+			, CODE_20 AS "code_20"
+			, CODE_18 AS "code_18"
+			, CODE_15 AS "code_15"
+			, CODE_17 AS "code_17"
+			, CODE_19 AS "code_19"
+			, CODE_09 AS "code_09"
+			, CODE_27 AS "code_27"
+			, CODE_16 AS "code_16"
+			, CODE_06 AS "code_06"
+			, CODE_99 AS "code_99"
+		FROM
+			TOTAL_AMT_TARGET
+	</select>
+	
+	<update id="updtTotalAmtTarget" parameterType="java.util.HashMap">
+		
+		UPDATE
+			TOTAL_AMT_TARGET 
+		SET
+			CODE_03 = #{code_03 }
+			, CODE_04 = #{code_04 }
+			, CODE_07 = #{code_07 }
+			, CODE_14 = #{code_14 }
+			, CODE_10 = #{code_10 }
+			, CODE_11 = #{code_11 }
+			, CODE_05 = #{code_05 }
+			, CODE_20 = #{code_20 }
+			, CODE_18 = #{code_18 }
+			, CODE_15 = #{code_15 }
+			, CODE_17 = #{code_17 }
+			, CODE_19 = #{code_19 }
+			, CODE_09 = #{code_09 }
+			, CODE_27 = #{code_27 }
+			, CODE_16 = #{code_16 }
+			, CODE_06 = #{code_06 }
+			, CODE_99 = #{code_99 }
+
+	</update>
+	
+	
+</mapper>

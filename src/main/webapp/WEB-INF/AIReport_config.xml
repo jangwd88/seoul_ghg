@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+<entry key="homeDir">/ai65/AIReport65</entry>
+<entry key="tempDir">/ai65/temp</entry>
+<entry key="viewerPath">/ai65/AIViewer65</entry>
+<entry key="fontDir"></entry>
+
+<entry key="localeLang">ko</entry>
+<entry key="schedulerTimeZone">GMT+09:00</entry>
+<entry key="enableAdminConsole">true</entry>
+
+<entry key="parameterDecoder.defaultURIEncoding">UTF-8</entry>
+<entry key="parameterDecoder.useRequest">false</entry>
+
+<entry key="AES128parameter">true</entry>
+<entry key="html.useExternalXerces">false</entry>
+<entry key="resourceSync.dir.client">C:/eGovFrameDev-3.8.0-64bit/workspace/project_seoul_monitoring/src/main/webapp/ai65/AIReport65</entry>
+
+<!--<entry key="defaultFontName">나눔고딕</entry>-->
+<!--<entry key="unicodeFontName">Code2000</entry>-->
+<!--<entry key="nexacroScheduleTime">07:20; 12:20; 16:20; 21:20</entry>-->
+<!--<entry key="userScheduleTasks">
+type=daily, name=(MyTask 1), class=sample.MyTask1, times=(09:20; 14:26; 17:38), useOwnThread=false
+type=periodic, name=(MyTask 3), class=sample.MyTask3, periodMinutes=30, useOwnThread=true
+</entry>-->
+</properties>

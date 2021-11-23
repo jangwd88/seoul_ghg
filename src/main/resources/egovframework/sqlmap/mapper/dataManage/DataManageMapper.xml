@@ -1,0 +1,681 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dataManageMapper">
+
+	<select id="selectYearList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_MIN_MAX_YYYY AS (
+		SELECT
+			MIN(A.YEAR) AS MIN_YYYY,
+			MAX(A.YEAR) AS MAX_YYYY
+		FROM
+			INV_ENG_GHG_MON A)
+		SELECT
+			MAX_YYYY-LEVEL + 1 AS YYYY
+		FROM
+			TEMP_MIN_MAX_YYYY
+		CONNECT BY
+			LEVEL &lt;= ((MAX_YYYY + 1)-MIN_YYYY)
+		ORDER BY
+			YYYY
+	</select>
+	
+	
+	<select id="dataManage001_getCRFMonthData" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_INV_ENG_MON_INPUT AS (
+				SELECT
+				   A.S_CD,
+				   A.S_DESC,
+				   B.ENG_UNIT,
+				   C.S_DESC AS ENG_UNIT_NM,
+				   B.VITAL_YN,
+				   B.YEAR,
+				   B.MON,
+				   B.N_ENG
+				FROM
+				   (
+				   SELECT
+				      A.*
+				   FROM
+				      T_CODE A
+				   WHERE
+				      A.S_CAT = 'FUEL_DIV') A,
+				   INV_ENG_MON_INPUT B,
+				   (
+				   SELECT
+				      A.*
+				   FROM
+				      T_CODE A
+				   WHERE
+				      A.S_CAT = 'UNIT') C
+				WHERE
+				   A.S_CD = B.ENG_FUEL_DIV(+)
+				   AND B.ENG_UNIT = C.S_CD(+)
+				   AND A.C_DEL_YN = 'N'
+				   AND B.INV_ENG_POINT_CODE = #{INV_ENG_POINT_CODE} /*PARAM(INV_ENG_POINT.CODE)*/
+				   AND B.YEAR = #{year} /*PARAM(기준년도)*/
+				ORDER BY
+				   A.N_ORDER),
+				TEMP_INV_ENG_MON AS (
+				SELECT
+				   A.S_CD,
+				   A.S_DESC,
+				   A.ENG_UNIT,
+				   A.ENG_UNIT_NM,
+				   A.VITAL_YN,
+				   A.YEAR,
+				   MAX(DECODE(A.MON, '1', A.N_ENG, NULL)) AS N_ENG_1,
+				   MAX(DECODE(A.MON, '2', A.N_ENG, NULL)) AS N_ENG_2,
+				   MAX(DECODE(A.MON, '3', A.N_ENG, NULL)) AS N_ENG_3,
+				   MAX(DECODE(A.MON, '4', A.N_ENG, NULL)) AS N_ENG_4,
+				   MAX(DECODE(A.MON, '5', A.N_ENG, NULL)) AS N_ENG_5,
+				   MAX(DECODE(A.MON, '6', A.N_ENG, NULL)) AS N_ENG_6,
+				   MAX(DECODE(A.MON, '7', A.N_ENG, NULL)) AS N_ENG_7,
+				   MAX(DECODE(A.MON, '8', A.N_ENG, NULL)) AS N_ENG_8,
+				   MAX(DECODE(A.MON, '9', A.N_ENG, NULL)) AS N_ENG_9,
+				   MAX(DECODE(A.MON, '10', A.N_ENG, NULL)) AS N_ENG_10,
+				   MAX(DECODE(A.MON, '11', A.N_ENG, NULL)) AS N_ENG_11,
+				   MAX(DECODE(A.MON, '12', A.N_ENG, NULL)) AS N_ENG_12
+				FROM
+				   TEMP_INV_ENG_MON_INPUT A
+				GROUP BY
+				   A.S_CD,
+				   A.S_DESC,
+				   A.ENG_UNIT,
+				   A.ENG_UNIT_NM,
+				   A.VITAL_YN,
+				   A.YEAR)
+				SELECT
+				   A.S_CD,
+				   A.S_DESC,
+				   A.ENG_UNIT,
+				   A.ENG_UNIT_NM,
+				   A.VITAL_YN,
+				   A.YEAR,
+				   NVL(A.N_ENG_1, 0) AS N_ENG_1,
+				   NVL(A.N_ENG_2, 0) AS N_ENG_2,
+				   NVL(A.N_ENG_3, 0) AS N_ENG_3,
+				   NVL(A.N_ENG_4, 0) AS N_ENG_4,
+				   NVL(A.N_ENG_5, 0) AS N_ENG_5,
+				   NVL(A.N_ENG_6, 0) AS N_ENG_6,
+				   NVL(A.N_ENG_7, 0) AS N_ENG_7,
+				   NVL(A.N_ENG_8, 0) AS N_ENG_8,
+				   NVL(A.N_ENG_9, 0) AS N_ENG_9,
+				   NVL(A.N_ENG_10, 0) AS N_ENG_10,
+				   NVL(A.N_ENG_11, 0) AS N_ENG_11,
+				   NVL(A.N_ENG_12, 0) AS N_ENG_12,
+				   NVL(A.N_ENG_1, 0) + NVL(A.N_ENG_2, 0) + NVL(A.N_ENG_3, 0) + NVL(A.N_ENG_4, 0) + NVL(A.N_ENG_5, 0) + NVL(A.N_ENG_6, 0) + NVL(A.N_ENG_7, 0) + NVL(A.N_ENG_8, 0) + NVL(A.N_ENG_9, 0) + NVL(A.N_ENG_10, 0) + NVL(A.N_ENG_11, 0) + NVL(A.N_ENG_12, 0) AS N_ENG_SUM
+				FROM
+				   TEMP_INV_ENG_MON A
+	</select>
+	
+
+	<select id="dataManage001_search" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_INV_ENG_POINT AS (
+					SELECT
+					   A.INV_ENG_POINT_ID,
+					   A.INV_ENG_POINT_NM_1,
+					   DECODE(A.INV_ENG_POINT_NM_2,
+					   NULL,
+					   A.INV_ENG_POINT_NM_1,
+					   A.INV_ENG_POINT_NM_2) AS INV_ENG_POINT_NM_2,
+					   DECODE(A.INV_ENG_POINT_NM_3,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_2,
+					   NULL,
+					   A.INV_ENG_POINT_NM_1,
+					   A.INV_ENG_POINT_NM_2),
+					   A.INV_ENG_POINT_NM_3) AS INV_ENG_POINT_NM_3,
+					   DECODE(A.INV_ENG_POINT_NM_4,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_3,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_2,
+					   NULL,
+					   A.INV_ENG_POINT_NM_1,
+					   A.INV_ENG_POINT_NM_2),
+					   A.INV_ENG_POINT_NM_3),
+					   A.INV_ENG_POINT_NM_4) AS INV_ENG_POINT_NM_4,
+					   DECODE(A.INV_ENG_POINT_NM_5,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_4,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_3,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_2,
+					   NULL,
+					   A.INV_ENG_POINT_NM_1,
+					   A.INV_ENG_POINT_NM_2),
+					   A.INV_ENG_POINT_NM_3),
+					   A.INV_ENG_POINT_NM_4),
+					   A.INV_ENG_POINT_NM_5) AS INV_ENG_POINT_NM_5,
+					   DECODE(A.INV_ENG_POINT_NM_6,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_5,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_4,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_3,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_2,
+					   NULL,
+					   A.INV_ENG_POINT_NM_1,
+					   A.INV_ENG_POINT_NM_2),
+					   A.INV_ENG_POINT_NM_3),
+					   A.INV_ENG_POINT_NM_4),
+					   A.INV_ENG_POINT_NM_5),
+					   A.INV_ENG_POINT_NM_6) AS INV_ENG_POINT_NM_6,
+					   A.DATA_INFO,
+					   (
+					   SELECT
+					      S_DESC
+					   FROM
+					      T_CODE
+					   WHERE
+					      S_CAT = 'INV_DATA_INFO'
+					      AND S_CD = A.DATA_INFO) AS DATA_INFO_NM,
+					   A.CODE
+					FROM
+					   (
+					   SELECT
+					      A.INV_ENG_POINT_ID,
+					      TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 1, 'i')) AS INV_ENG_POINT_NM_1,
+					      TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 2, 'i')) AS INV_ENG_POINT_NM_2,
+					      TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 3, 'i')) AS INV_ENG_POINT_NM_3,
+					      TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 4, 'i')) AS INV_ENG_POINT_NM_4,
+					      TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 5, 'i')) AS INV_ENG_POINT_NM_5,
+					      TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 6, 'i')) AS INV_ENG_POINT_NM_6,
+					      ROWNUM AS N_ORDER,
+					      A.DATA_INFO,
+					      A.CODE
+					   FROM
+					      (
+					      SELECT
+					         A.*
+					      FROM
+					         INV_ENG_POINT A
+					      WHERE
+					         1 = 1
+					         AND A.INV_ENG_POINT_DIV = '3' /*FIX(CRF)*/
+					         AND A.C_DEL_YN = 'N') A
+					   WHERE
+					      1 = 1
+					      AND CONNECT_BY_ISLEAF = 1
+					   START WITH
+					      A.UP_INV_ENG_POINT_CD = '0'
+					   CONNECT BY
+					      PRIOR A.INV_ENG_POINT_CD = A.UP_INV_ENG_POINT_CD ORDER SIBLINGS BY A.N_ORDER) A),
+					TEMP_INV_ENG_GHG_MON AS (
+					SELECT
+					   A.INV_ENG_POINT_ID,
+					   MAX(DECODE(A.MON, '1', A.GHG_VAL, NULL)) AS GHG_VAL_MON_1,
+					   MAX(DECODE(A.MON, '2', A.GHG_VAL, NULL)) AS GHG_VAL_MON_2,
+					   MAX(DECODE(A.MON, '3', A.GHG_VAL, NULL)) AS GHG_VAL_MON_3,
+					   MAX(DECODE(A.MON, '4', A.GHG_VAL, NULL)) AS GHG_VAL_MON_4,
+					   MAX(DECODE(A.MON, '5', A.GHG_VAL, NULL)) AS GHG_VAL_MON_5,
+					   MAX(DECODE(A.MON, '6', A.GHG_VAL, NULL)) AS GHG_VAL_MON_6,
+					   MAX(DECODE(A.MON, '7', A.GHG_VAL, NULL)) AS GHG_VAL_MON_7,
+					   MAX(DECODE(A.MON, '8', A.GHG_VAL, NULL)) AS GHG_VAL_MON_8,
+					   MAX(DECODE(A.MON, '9', A.GHG_VAL, NULL)) AS GHG_VAL_MON_9,
+					   MAX(DECODE(A.MON, '10', A.GHG_VAL, NULL)) AS GHG_VAL_MON_10,
+					   MAX(DECODE(A.MON, '11', A.GHG_VAL, NULL)) AS GHG_VAL_MON_11,
+					   MAX(DECODE(A.MON, '12', A.GHG_VAL, NULL)) AS GHG_VAL_MON_12,
+						MAX(DECODE(A.MON, '1', A.CLOSE_YN, NULL)) AS CLOSE_YN_1,
+						MAX(DECODE(A.MON, '2', A.CLOSE_YN, NULL)) AS CLOSE_YN_2,
+						MAX(DECODE(A.MON, '3', A.CLOSE_YN, NULL)) AS CLOSE_YN_3,
+						MAX(DECODE(A.MON, '4', A.CLOSE_YN, NULL)) AS CLOSE_YN_4,
+						MAX(DECODE(A.MON, '5', A.CLOSE_YN, NULL)) AS CLOSE_YN_5,
+						MAX(DECODE(A.MON, '6', A.CLOSE_YN, NULL)) AS CLOSE_YN_6,
+						MAX(DECODE(A.MON, '7', A.CLOSE_YN, NULL)) AS CLOSE_YN_7,
+						MAX(DECODE(A.MON, '8', A.CLOSE_YN, NULL)) AS CLOSE_YN_8,
+						MAX(DECODE(A.MON, '9', A.CLOSE_YN, NULL)) AS CLOSE_YN_9,
+						MAX(DECODE(A.MON, '10', A.CLOSE_YN, NULL)) AS CLOSE_YN_10,
+						MAX(DECODE(A.MON, '11', A.CLOSE_YN, NULL)) AS CLOSE_YN_11,
+						MAX(DECODE(A.MON, '12', A.CLOSE_YN, NULL)) AS CLOSE_YN_12
+					FROM
+					   INV_ENG_GHG_MON A
+					WHERE
+					   1 = 1
+					   AND A.YEAR = #{year} /*PARAM(기준년도)*/
+					   AND A.INV_ENG_POINT_ID IN (
+					   SELECT
+					      INV_ENG_POINT_ID
+					   FROM
+					      INV_ENG_POINT
+					   WHERE
+					      1 = 1
+					      AND INV_ENG_POINT_DIV = '3' /*FIX(CRF)*/
+					      AND C_DEL_YN = 'N')
+					GROUP BY
+					   A.INV_ENG_POINT_ID),
+					TEMP_INV_ENG_GHG_YEAR AS (
+					SELECT
+					   A.INV_ENG_POINT_ID,
+					   NVL(A.GHG_VAL,
+					   NULL) AS GHG_VAL_YEAR
+					FROM
+					   INV_ENG_GHG_YEAR A
+					WHERE
+					   A.YEAR = #{year} /*PARAM(기준년도)*/)
+					SELECT
+					   A.INV_ENG_POINT_ID,
+					   A.INV_ENG_POINT_NM_1,
+					   A.INV_ENG_POINT_NM_2,
+					   A.INV_ENG_POINT_NM_3,
+					   A.INV_ENG_POINT_NM_4,
+					   A.INV_ENG_POINT_NM_5,
+					   A.INV_ENG_POINT_NM_6,
+					   A.CODE,
+					   A.DATA_INFO,
+					   A.DATA_INFO_NM,
+					   ROUND(NVL(B.GHG_VAL_MON_1, 0), 0) AS GHG_VAL_MON_1,/*1월*/
+					   ROUND(NVL(B.GHG_VAL_MON_2, 0), 0) AS GHG_VAL_MON_2,/*2월*/
+					   ROUND(NVL(B.GHG_VAL_MON_3, 0), 0) AS GHG_VAL_MON_3,/*3월*/
+					   ROUND(NVL(B.GHG_VAL_MON_4, 0), 0) AS GHG_VAL_MON_4,/*4월*/
+					   ROUND(NVL(B.GHG_VAL_MON_5, 0), 0) AS GHG_VAL_MON_5,/*5월*/
+					   ROUND(NVL(B.GHG_VAL_MON_6, 0), 0) AS GHG_VAL_MON_6,/*6월*/
+					   ROUND(NVL(B.GHG_VAL_MON_7, 0), 0) AS GHG_VAL_MON_7,/*7월*/
+					   ROUND(NVL(B.GHG_VAL_MON_8, 0), 0) AS GHG_VAL_MON_8,/*8월*/
+					   ROUND(NVL(B.GHG_VAL_MON_9, 0), 0) AS GHG_VAL_MON_9,/*9월*/
+					   ROUND(NVL(B.GHG_VAL_MON_10, 0), 0) AS GHG_VAL_MON_10,/*10월*/
+					   ROUND(NVL(B.GHG_VAL_MON_11, 0), 0) AS GHG_VAL_MON_11,/*11월*/
+					   ROUND(NVL(B.GHG_VAL_MON_12, 0), 0) AS GHG_VAL_MON_12,/*12월*/
+					   ROUND(NVL(B.GHG_VAL_MON_1, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_2, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_3, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_4, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_5, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_6, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_7, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_8, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_9, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_10, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_11, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_12, 0), 0) AS GHG_VAL_MON_SUM,/*년합계*/
+					   ROUND(NVL(C.GHG_VAL_YEAR, 0), 0) AS GHG_VAL_YEAR,/*확정*/
+					   B.CLOSE_YN_1,
+						B.CLOSE_YN_2,
+						B.CLOSE_YN_3,
+						B.CLOSE_YN_4,
+						B.CLOSE_YN_5,
+						B.CLOSE_YN_6,
+						B.CLOSE_YN_7,
+						B.CLOSE_YN_8,
+						B.CLOSE_YN_9,
+						B.CLOSE_YN_10,
+						B.CLOSE_YN_11,
+						B.CLOSE_YN_12
+					FROM
+					   TEMP_INV_ENG_POINT A,
+					   TEMP_INV_ENG_GHG_MON B,
+					   TEMP_INV_ENG_GHG_YEAR C
+					WHERE
+					   A.INV_ENG_POINT_ID = B.INV_ENG_POINT_ID(+)
+					   AND A.INV_ENG_POINT_ID = C.INV_ENG_POINT_ID(+)
+	</select>
+	
+	<select id="dataManage003_search" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_INV_ENG_POINT AS (
+					SELECT
+					   A.INV_ENG_POINT_ID,
+					   A.INV_ENG_POINT_NM_1,
+					   DECODE(A.INV_ENG_POINT_NM_2,
+					   NULL,
+					   A.INV_ENG_POINT_NM_1,
+					   A.INV_ENG_POINT_NM_2) AS INV_ENG_POINT_NM_2,
+					   DECODE(A.INV_ENG_POINT_NM_3,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_2,
+					   NULL,
+					   A.INV_ENG_POINT_NM_1,
+					   A.INV_ENG_POINT_NM_2),
+					   A.INV_ENG_POINT_NM_3) AS INV_ENG_POINT_NM_3,
+					   DECODE(A.INV_ENG_POINT_NM_4,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_3,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_2,
+					   NULL,
+					   A.INV_ENG_POINT_NM_1,
+					   A.INV_ENG_POINT_NM_2),
+					   A.INV_ENG_POINT_NM_3),
+					   A.INV_ENG_POINT_NM_4) AS INV_ENG_POINT_NM_4,
+					   DECODE(A.INV_ENG_POINT_NM_5,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_4,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_3,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_2,
+					   NULL,
+					   A.INV_ENG_POINT_NM_1,
+					   A.INV_ENG_POINT_NM_2),
+					   A.INV_ENG_POINT_NM_3),
+					   A.INV_ENG_POINT_NM_4),
+					   A.INV_ENG_POINT_NM_5) AS INV_ENG_POINT_NM_5,
+					   DECODE(A.INV_ENG_POINT_NM_6,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_5,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_4,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_3,
+					   NULL,
+					   DECODE(A.INV_ENG_POINT_NM_2,
+					   NULL,
+					   A.INV_ENG_POINT_NM_1,
+					   A.INV_ENG_POINT_NM_2),
+					   A.INV_ENG_POINT_NM_3),
+					   A.INV_ENG_POINT_NM_4),
+					   A.INV_ENG_POINT_NM_5),
+					   A.INV_ENG_POINT_NM_6) AS INV_ENG_POINT_NM_6,
+					   A.DATA_INFO,
+					   (
+					   SELECT
+					      S_DESC
+					   FROM
+					      T_CODE
+					   WHERE
+					      S_CAT = 'INV_DATA_INFO'
+					      AND S_CD = A.DATA_INFO) AS DATA_INFO_NM,
+					   A.CODE
+					FROM
+					   (
+					   SELECT
+					      A.INV_ENG_POINT_ID,
+					      TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 1, 'i')) AS INV_ENG_POINT_NM_1,
+					      TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 2, 'i')) AS INV_ENG_POINT_NM_2,
+					      TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 3, 'i')) AS INV_ENG_POINT_NM_3,
+					      TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 4, 'i')) AS INV_ENG_POINT_NM_4,
+					      TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 5, 'i')) AS INV_ENG_POINT_NM_5,
+					      TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 6, 'i')) AS INV_ENG_POINT_NM_6,
+					      ROWNUM AS N_ORDER,
+					      A.DATA_INFO,
+					      A.CODE
+					   FROM
+					      (
+					      SELECT
+					         A.*
+					      FROM
+					         INV_ENG_POINT A
+					      WHERE
+					         1 = 1
+					         AND A.INV_ENG_POINT_DIV = '4' /*FIX(GPC)*/
+					         AND A.C_DEL_YN = 'N') A
+					   WHERE
+					      1 = 1
+					      AND CONNECT_BY_ISLEAF = 1
+					   START WITH
+					      A.UP_INV_ENG_POINT_CD = '0'
+					   CONNECT BY
+					      PRIOR A.INV_ENG_POINT_CD = A.UP_INV_ENG_POINT_CD ORDER SIBLINGS BY A.N_ORDER) A),
+					TEMP_INV_ENG_GHG_MON AS (
+					SELECT
+					   A.INV_ENG_POINT_ID,
+					   MAX(DECODE(A.MON, '1', A.GHG_VAL, NULL)) AS GHG_VAL_MON_1,
+					   MAX(DECODE(A.MON, '2', A.GHG_VAL, NULL)) AS GHG_VAL_MON_2,
+					   MAX(DECODE(A.MON, '3', A.GHG_VAL, NULL)) AS GHG_VAL_MON_3,
+					   MAX(DECODE(A.MON, '4', A.GHG_VAL, NULL)) AS GHG_VAL_MON_4,
+					   MAX(DECODE(A.MON, '5', A.GHG_VAL, NULL)) AS GHG_VAL_MON_5,
+					   MAX(DECODE(A.MON, '6', A.GHG_VAL, NULL)) AS GHG_VAL_MON_6,
+					   MAX(DECODE(A.MON, '7', A.GHG_VAL, NULL)) AS GHG_VAL_MON_7,
+					   MAX(DECODE(A.MON, '8', A.GHG_VAL, NULL)) AS GHG_VAL_MON_8,
+					   MAX(DECODE(A.MON, '9', A.GHG_VAL, NULL)) AS GHG_VAL_MON_9,
+					   MAX(DECODE(A.MON, '10', A.GHG_VAL, NULL)) AS GHG_VAL_MON_10,
+					   MAX(DECODE(A.MON, '11', A.GHG_VAL, NULL)) AS GHG_VAL_MON_11,
+					   MAX(DECODE(A.MON, '12', A.GHG_VAL, NULL)) AS GHG_VAL_MON_12,
+						MAX(DECODE(A.MON, '1', A.CLOSE_YN, NULL)) AS CLOSE_YN_1,
+						MAX(DECODE(A.MON, '2', A.CLOSE_YN, NULL)) AS CLOSE_YN_2,
+						MAX(DECODE(A.MON, '3', A.CLOSE_YN, NULL)) AS CLOSE_YN_3,
+						MAX(DECODE(A.MON, '4', A.CLOSE_YN, NULL)) AS CLOSE_YN_4,
+						MAX(DECODE(A.MON, '5', A.CLOSE_YN, NULL)) AS CLOSE_YN_5,
+						MAX(DECODE(A.MON, '6', A.CLOSE_YN, NULL)) AS CLOSE_YN_6,
+						MAX(DECODE(A.MON, '7', A.CLOSE_YN, NULL)) AS CLOSE_YN_7,
+						MAX(DECODE(A.MON, '8', A.CLOSE_YN, NULL)) AS CLOSE_YN_8,
+						MAX(DECODE(A.MON, '9', A.CLOSE_YN, NULL)) AS CLOSE_YN_9,
+						MAX(DECODE(A.MON, '10', A.CLOSE_YN, NULL)) AS CLOSE_YN_10,
+						MAX(DECODE(A.MON, '11', A.CLOSE_YN, NULL)) AS CLOSE_YN_11,
+						MAX(DECODE(A.MON, '12', A.CLOSE_YN, NULL)) AS CLOSE_YN_12
+					FROM
+					   INV_ENG_GHG_MON A
+					WHERE
+					   1 = 1
+					   AND A.YEAR = #{year} /*PARAM(기준년도)*/
+					   AND A.INV_ENG_POINT_ID IN (
+					   SELECT
+					      INV_ENG_POINT_ID
+					   FROM
+					      INV_ENG_POINT
+					   WHERE
+					      1 = 1
+					      AND INV_ENG_POINT_DIV = '4' /*FIX(CRF)*/
+					      AND C_DEL_YN = 'N')
+					GROUP BY
+					   A.INV_ENG_POINT_ID),
+					TEMP_INV_ENG_GHG_YEAR AS (
+					SELECT
+					   A.INV_ENG_POINT_ID,
+					   NVL(A.GHG_VAL,
+					   NULL) AS GHG_VAL_YEAR
+					FROM
+					   INV_ENG_GHG_YEAR A
+					WHERE
+					   A.YEAR = #{year} /*PARAM(기준년도)*/)
+					SELECT
+					   A.INV_ENG_POINT_ID,
+					   A.INV_ENG_POINT_NM_1,
+					   A.INV_ENG_POINT_NM_2,
+					   A.INV_ENG_POINT_NM_3,
+					   A.INV_ENG_POINT_NM_4,
+					   A.INV_ENG_POINT_NM_5,
+					   A.INV_ENG_POINT_NM_6,
+					   A.CODE,
+					   A.DATA_INFO_NM,
+					   ROUND(NVL(B.GHG_VAL_MON_1, 0), 0) AS GHG_VAL_MON_1,/*1월*/
+					   ROUND(NVL(B.GHG_VAL_MON_2, 0), 0) AS GHG_VAL_MON_2,/*2월*/
+					   ROUND(NVL(B.GHG_VAL_MON_3, 0), 0) AS GHG_VAL_MON_3,/*3월*/
+					   ROUND(NVL(B.GHG_VAL_MON_4, 0), 0) AS GHG_VAL_MON_4,/*4월*/
+					   ROUND(NVL(B.GHG_VAL_MON_5, 0), 0) AS GHG_VAL_MON_5,/*5월*/
+					   ROUND(NVL(B.GHG_VAL_MON_6, 0), 0) AS GHG_VAL_MON_6,/*6월*/
+					   ROUND(NVL(B.GHG_VAL_MON_7, 0), 0) AS GHG_VAL_MON_7,/*7월*/
+					   ROUND(NVL(B.GHG_VAL_MON_8, 0), 0) AS GHG_VAL_MON_8,/*8월*/
+					   ROUND(NVL(B.GHG_VAL_MON_9, 0), 0) AS GHG_VAL_MON_9,/*9월*/
+					   ROUND(NVL(B.GHG_VAL_MON_10, 0), 0) AS GHG_VAL_MON_10,/*10월*/
+					   ROUND(NVL(B.GHG_VAL_MON_11, 0), 0) AS GHG_VAL_MON_11,/*11월*/
+					   ROUND(NVL(B.GHG_VAL_MON_12, 0), 0) AS GHG_VAL_MON_12,/*12월*/
+					   ROUND(NVL(B.GHG_VAL_MON_1, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_2, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_3, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_4, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_5, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_6, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_7, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_8, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_9, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_10, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_11, 0), 0) + ROUND(NVL(B.GHG_VAL_MON_12, 0), 0) AS GHG_VAL_MON_SUM,/*년합계*/
+					   ROUND(NVL(C.GHG_VAL_YEAR, 0), 0) AS GHG_VAL_YEAR,/*확정*/
+					   B.CLOSE_YN_1,
+						B.CLOSE_YN_2,
+						B.CLOSE_YN_3,
+						B.CLOSE_YN_4,
+						B.CLOSE_YN_5,
+						B.CLOSE_YN_6,
+						B.CLOSE_YN_7,
+						B.CLOSE_YN_8,
+						B.CLOSE_YN_9,
+						B.CLOSE_YN_10,
+						B.CLOSE_YN_11,
+						B.CLOSE_YN_12
+					FROM
+					   TEMP_INV_ENG_POINT A,
+					   TEMP_INV_ENG_GHG_MON B,
+					   TEMP_INV_ENG_GHG_YEAR C
+					WHERE
+					   A.INV_ENG_POINT_ID = B.INV_ENG_POINT_ID(+)
+					   AND A.INV_ENG_POINT_ID = C.INV_ENG_POINT_ID(+)
+	</select>
+
+	<insert id="dataManage001_saveMonth" parameterType="java.util.HashMap">
+	
+	MERGE INTO INV_ENG_MON_INPUT 
+			USING DUAL 
+		ON (
+			INV_ENG_POINT_CODE = #{POINT_CODE} AND ENG_FUEL_DIV = #{FUEL_DIV} AND ENG_UNIT = #{UNIT} AND YEAR = #{YEAR} AND MON = #{MON} 
+		)
+		WHEN MATCHED THEN 
+			UPDATE SET 
+				N_ENG = #{VALUE},
+				VITAL_YN = #{VITAL_YN}
+				D_MOD_DATE = sysdate
+		WHEN NOT MATCHED THEN
+		INSERT (INV_ENG_MON_INPUT_ID,
+				INV_ENG_POINT_CODE,
+				ENG_FUEL_DIV,
+				ENG_UNIT,
+				YEAR,
+				MON,
+				N_ENG,
+				VITAL_YN,
+				S_REG_ID,	
+				D_REG_DATE	)
+		VALUES (
+				(SELECT NVL(MAX(INV_ENG_MON_INPUT_ID),0) + 1 FROM INV_ENG_MON_INPUT),
+				#{POINT_CODE},
+				#{FUEL_DIV},
+				#{UNIT},
+				#{YEAR},
+				#{MON},
+				#{VALUE},
+				#{VITAL_YN},
+				'admin',
+				sysdate
+		 )
+	</insert>
+	
+	<insert id="dataManage003_save" parameterType="java.util.HashMap">
+	
+	MERGE INTO INV_ENG_GHG_MON 
+			USING DUAL 
+		ON (
+			INV_ENG_POINT_ID = #{POINT_ID} AND YEAR = #{YEAR} AND MON = #{MON} 
+		)
+		WHEN MATCHED THEN 
+			UPDATE SET 
+				GHG_VAL = #{VALUE},
+				D_MOD_DATE = sysdate
+		WHEN NOT MATCHED THEN
+		INSERT (INV_ENG_GHG_MON_ID,
+				INV_ENG_POINT_ID,
+				YEAR,
+				MON,
+				GHG_VAL,
+				CLOSE_YN,
+				S_REG_ID,	
+				D_REG_DATE	)
+		VALUES (
+				(SELECT NVL(MAX(INV_ENG_GHG_MON_ID),0) + 1 FROM INV_ENG_GHG_MON),
+				#{POINT_ID},
+				#{YEAR},
+				#{MON},
+				#{VALUE},
+				'N',
+				'admin',
+				sysdate
+		 )
+	</insert>
+	
+	<update id="dataManage002_close" parameterType="java.util.HashMap">
+		UPDATE INV_ENG_GHG_MON
+			SET CLOSE_YN = 'Y'
+		WHERE YEAR||LPAD(MON,2,'0') &lt;= #{year} || LPAD(#{month},2,'0')
+	</update>
+	
+	<update id="dataManage002_closeCancel" parameterType="java.util.HashMap">
+		UPDATE INV_ENG_GHG_MON
+			SET CLOSE_YN = 'N'
+			WHERE YEAR||LPAD(MON,2,'0') >= #{year} || LPAD(#{month},2,'0')
+	</update>
+	
+	<insert id="dataManage003_saveYear" parameterType="java.util.HashMap">
+	
+	MERGE INTO INV_ENG_GHG_YEAR 
+			USING DUAL 
+		ON (
+			INV_ENG_POINT_ID = #{POINT_ID} AND YEAR = #{YEAR} 
+		)
+		WHEN MATCHED THEN 
+			UPDATE SET 
+				GHG_VAL = #{VALUE},
+				D_MOD_DATE = sysdate
+		WHEN NOT MATCHED THEN
+		INSERT (INV_ENG_GHG_YEAR_ID,
+				INV_ENG_POINT_ID,
+				YEAR,
+				GHG_VAL,
+				FIX_YN,
+				S_REG_ID,	
+				D_REG_DATE	)
+		VALUES (
+				(SELECT NVL(MAX(INV_ENG_GHG_YEAR_ID),0) + 1 FROM INV_ENG_GHG_YEAR),
+				#{POINT_ID},
+				#{YEAR},
+				#{VALUE},
+				'Y',
+				'admin',
+				sysdate
+		 )
+	</insert>
+	
+	<select id="dataManage001_execute" parameterType="java.util.HashMap" statementType="CALLABLE">
+		{
+            CALL INV_ENG_GHG_MON_INPUT(
+                #{year},
+                #{applicationYear},
+                #{annualYear}
+            )
+        }
+	</select>
+	
+	<select id="dataManage003_execute" parameterType="java.util.HashMap" statementType="CALLABLE">
+		{
+            CALL INV_ENG_GHG_MON_INPUT1(
+                #{year},
+                #{applicationYear}
+            )
+        }
+	</select>
+	
+	<select id="selectListTempList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		 	(SELECT
+				INV_ENG_POINT_ID
+			FROM
+				INV_ENG_POINT
+			WHERE
+				CODE = #{POINT_CODE}) AS INV_ENG_POINT_ID,
+			INV_ENG_POINT_CODE,
+			YEAR,
+			MON,
+			SUM(N_ENG) AS N_ENG_SUM
+		FROM
+			INV_ENG_MON_INPUT
+		WHERE
+			INV_ENG_POINT_CODE = #{POINT_CODE}
+			AND YEAR = #{YEAR}
+		GROUP BY
+			INV_ENG_POINT_CODE,
+			YEAR,
+			MON
+	</select>
+	
+	<insert id="insertTempData" parameterType="java.util.HashMap">
+	
+	MERGE INTO INV_ENG_GHG_MON 
+			USING DUAL 
+		ON (
+			INV_ENG_POINT_ID = #{INV_ENG_POINT_ID} AND YEAR = #{YEAR} AND MON = #{MON} 
+		)
+		WHEN MATCHED THEN 
+			UPDATE SET 
+				GHG_VAL = #{N_ENG_SUM},
+				D_MOD_DATE = sysdate
+		WHEN NOT MATCHED THEN
+		INSERT (INV_ENG_GHG_MON_ID,
+				INV_ENG_POINT_ID,
+				YEAR,
+				MON,
+				GHG_VAL,
+				CLOSE_YN,
+				S_REG_ID,	
+				D_REG_DATE	)
+		VALUES (
+				(SELECT NVL(MAX(INV_ENG_GHG_MON_ID),0) + 1 FROM INV_ENG_GHG_MON),
+				#{INV_ENG_POINT_ID},
+				#{YEAR},
+				#{MON},
+				#{N_ENG_SUM},
+				'N',
+				'admin',
+				sysdate
+		 )
+	</insert>
+</mapper>

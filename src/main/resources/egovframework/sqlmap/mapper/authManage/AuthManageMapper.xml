@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="authManageMapper">
+
+	<update id="authManage_update" parameterType="java.util.HashMap">
+		UPDATE USER_INFO
+		   SET AUTH_INFO = #{AUTH_INFO},
+				S_MOD_ID = 'admin',
+				D_MOD_DATE = SYSDATE
+		 WHERE ADMIN_ID = #{ADMIN_ID}
+	</update>
+	
+</mapper>

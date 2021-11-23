@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
+  <script type="text/javascript">
+      var $dsList, $dsInfo;
+      var $infoDialog, $infoBody;
+
+      // DOM구성완료후 request와 callback을 직접처리(로딩순서 문제로 메뉴에서 불가)
+      $(function () {
+          $dsList = $(document.getElementById("dsList"));
+          $dsInfo = $(document.getElementById("dsInfo"));
+          $infoDialog = $(document.getElementById("infoModal"));
+          $infoBody = $infoDialog.find(".modal-body");
+
+          parent.simpleRequest.setTask("data", "dataSource", "list");
+          parent.simpleRequest.doRequest("GET", null, dataLoaded, 180000, "xml");
+      });
+
+      var dsInfoArr; // (jq)element or text를 유지
+      function dataLoaded(xml) {
+          $dsList.css("display", "none");
+
+          var dsList = $(xml).find("DataSource");
+          var len = dsList.length;
+          dsInfoArr = new Array(len);
+          dsList.each(function(index) {
+              var id = $(this).attr("id");
+              var type = $(this).attr("subType");
+              var status = $(this).attr('status');
+              if (status == "on") {
+                  status = "사용가능";
+              } else {
+                  status = "<a data-container='body' data-content='" + status +
+                           "' data-toggle='popover' data-trigger='hover'>사용불가능</a>";
+              }
+
+              if (type == "DRIVER") {
+                  dsInfoArr[index] = $(this).children("Driver").first();
+              } else {
+                  dsInfoArr[index] = $(this).children("Source").first().text();
+              }
+              var row = "<tr><td>" + (index+1) + "</td><td><button type='button' style='padding-left:0;' class='btn btn-link' " +
+                        "onclick='showInfo(" + index + ",\"" + type + "\")'>" + id + "</button></td>" +
+                        "<td>" + type + "</td><td>" + status + "</td>" +
+                        "<td>" + parent.composeDateStr($(this).attr('modTime')) + "</td>" +
+                        "<td><button type='button' class='btn btn-success' " +
+                        "onclick='expDS(\"" + id + "\",\"" + type + "\")'>Export</button></td>" +
+                        "<td><button type='button' class='btn btn-danger' " +
+                        "onclick='del(\"" + id + "\",\"" + type + "\")'>삭제</button></td></tr>";
+
+              $dsList.append(row);
+          });
+          if (len == 0) {
+              $dsList.append("<tr><td colspan='7'><b>등록된 데이타소스가 없습니다</b></td></tr>");
+              $dsInfo.hide();
+          } else {
+              $("[data-toggle='popover']").popover();
+          }
+
+          $dsList.css("display", "table");
+      }
+
+      function showInfo(index, type) {
+          if (type == "DRIVER") {
+              $dsInfo.text(composeDriverInfo(dsInfoArr[index]));
+          } else {
+              $dsInfo.text(dsInfoArr[index]); // 별도 escaping은 불필요
+          }
+      }
+
+      function expDS(id, type) {
+          parent.simpleRequest.setTask("data", "dataSource", "export");
+          parent.simpleRequest.doRequest("GET", {id:id, subType:type}, null, -1, null);
+      }
+
+      function del(id, type) {
+          var msg = "데이타소스 <" + id + "> 를 삭제하시겠습니까?\n";
+          msg +=    "삭제시 이를 사용하는 보고서들이 실행되지 않습니다.";
+          if (window.confirm(msg)) {
+              parent.simpleRequest.setTask("data", "dataSource", "delete");
+              parent.simpleRequest.doRequest("GET", {id:id, subType:type}, onDeleted, 30000, "text");
+          }
+      }
+
+      function onDeleted(content) {
+          window.setTimeout(function() { // report_list의 onDeleted() 참조
+              window.alert("삭제되었습니다.");
+              document.location.reload();
+          }, 300);
+      }
+
+      function composeDriverInfo(eleDriver) {
+          var info = "Driver클래스 = " + eleDriver.attr("class");
+          info += ";  jdbcURL = " + eleDriver.attr("url");
+          var v = eleDriver.attr("user");
+          if (v != "null") { // 서버에서 생략대신 문자열(null)이 그대로 인코딩됨
+              info += ";  User = " + v;
+          }
+          v = eleDriver.attr("passwd");
+          if (v != "null") {
+              info += ";  Password = " + v;
+          }
+
+          return info;
+      }
+
+
+      function showHistory() {
+          parent.simpleRequest.setTask("data", "dataSource", "history");
+          parent.simpleRequest.doRequest("GET", null, historyLoaded, 70000, "xml");
+      }
+      function historyLoaded(xml) {
+          window.setTimeout(function() {
+              showHistoryWindow(xml);
+          }, 300);
+      }
+      function showHistoryWindow(xml) {
+          var $ah = $(xml.documentElement); // root(AdmHistory)
+          var $hList = $ah.children("His");
+
+          var historyTable =
+          "<div style='overflow:auto; max-height:300px;'>" +
+          "<table class='table table-hover' style='font-size:12px; margin-top:5px; margin-bottom:0;'>" +
+          "<thead><tr><th>구분</th><th>데이타소스ID</th><th>작업일자</th><th>작업자</th><th>작업자 PC주소</th></tr></thead>";
+
+          if ($hList.length == 0) {
+              historyTable += ("<tr><td colspan='5'>운영내역 없음</td></tr>");
+          } else {
+              var tr;
+              $hList.each(function() {
+                  var $row = $(this);
+                  tr = "<tr><td>" + $row.attr('T') + "</td>" +
+                       "<td>" + $row.attr('ID') + "</td>" +
+                       "<td>" + parent.composeDateStr($row.attr('D')) + "</td>" +
+                       "<td>" + $row.attr('DI') + "</td>" +
+                       "<td>" + ($row.attr('DA') || "") + "</td></tr>";
+                  historyTable += tr;
+              });
+          }
+          historyTable += "</table></div>";
+
+          $infoBody.html(historyTable);
+          $infoDialog.modal("show");
+      }
+  </script>
+</head>
+<body>
+
+  <div class="page-header" style="margin:20px 10px;">
+    <h1><small>데이타소스 목록</small></h1>
+    <button type="button" class="btn btn-primary" style="margin-top:7px;"
+            onclick="showHistory();">운영내역</button>
+  </div>
+
+  <div style="margin:10px; height:200px; overflow:auto;">
+    <table id="dsList" class="table table-hover">
+      <thead><tr><th>구분</th><th>ID</th><th>유형</th><th>상태</th><th>수정일자</th><th>백업</th><th>삭제</th></tr></thead>
+    </table>
+  </div>
+
+  <div style="margin:10px;">
+    <pre id="dsInfo">ID를 클릭하면 세부내용이 이곳에 표시됩니다</pre>
+  </div>
+
+  <div id="infoModal" class="modal" role="dialog" data-backdrop="static" tabindex="-1">
+    <div class="modal-dialog" role="document" style="min-width:700px;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+          <h4 class="modal-title">데이타소스 운영내역</h4>
+        </div>
+        <div class="modal-body" style="padding-bottom:0;">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

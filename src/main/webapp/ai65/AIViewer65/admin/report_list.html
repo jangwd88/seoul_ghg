@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="jstree/themes/default/style.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="jstree/jstree.min.js"></script>
+  <script type="text/javascript">
+      var $reportList;
+
+      var $categoryContainer, $categoryMap;
+      var jsTreeInstance, selectedNode, baseNode;
+      // 생성/수정/삭제성공 후 callback에서의 처리대상을 저장
+      var targetNode;// callback이전의 특이 액션으로 selectedNode와 다를수 있음
+
+      var infoVer; // 보고서정보(XML)의 spec버전으로 상세보기 링크에 활용(2020.5.25)
+      var $infoDialog, $infoBody, $infoTitle;
+
+      // DOM구성완료후 request와 callback을 직접처리(로딩순서 문제로 메뉴에서 불가)
+      $(function () {
+          $reportList = $(document.getElementById("reportList"));
+          $categoryContainer = $(document.getElementById("reportCategory"));
+          $categoryMap = $(document.getElementById("categoryMap"));
+          $infoDialog = $(document.getElementById("infoModal"));
+          $infoBody = $infoDialog.find(".modal-body");
+          $infoTitle = $infoDialog.find(".modal-title");
+          // 아래코드로 bootstrap의 body폰트설정을 over-ride가능 (적용 보류)
+          //document.body.style.fontFamily = "'맑은 고딕',Arial,sans-serif";
+          parent.simpleRequest.setTask("report", "category", "list");
+          parent.simpleRequest.doRequest("GET", null, dataLoaded, 50000, "xml");
+      });
+
+      function dataLoaded(xml) {
+          var baseCMenu = {
+            "create-top": {"label": "최상위 카테고리 생성",
+                           "action": function(e) {createCategory(true);}
+            }
+          };
+          var commCMenu = {
+            "create-child": {"label": "자식 카테고리 생성",
+                             "action": function(e) {createCategory(false);}
+            },
+            "rename": {"label": "이름 변경",
+                       "action": function(e) {renameCategory();}
+            },
+            "delete": {"label": "삭제", "separator_before": true,
+                       "action": function(e) {deleteCategory();}
+            }
+          };
+
+          var cateObjArr = []; // base + top
+
+          var $xml = $(xml.documentElement); // root(ReportCategories)
+          infoVer = $xml.attr("ver");
+          var $baseCategory = $xml.children("BaseCategory").eq(0);
+          $baseCategory.attr("name", "기본카테고리");
+          var baseCateObj = configCategoryObject($baseCategory);
+          baseCateObj.id = "base"; // 내부 자체 식별자
+          baseCateObj.state = {selected: true}; // 초기 선택
+
+          cateObjArr[0] = baseCateObj;
+
+          var $topCategory = $xml.children("Category"); // etc top
+          $topCategory.each(function(idx) { // maybe empty
+              cateObjArr[idx+1] = configCategoryObject($(this));
+          });
+
+          $categoryContainer.jstree({
+              "core": {
+                "data": cateObjArr, "check_callback": onTreeModified,
+                "multiple": false // 단일노드선택모드
+              },
+              "contextmenu": {
+                "show_at_node": false, // 우클릭위치에 메뉴창 popup
+                "items": function (node, callback) {
+                    if (node == baseNode) {
+                        callback(baseCMenu);
+                    } else {
+                        callback(commCMenu);
+                    }
+                }
+              },
+              "plugins": ["contextmenu", "wholerow", "unique"]
+          });
+          jsTreeInstance = $categoryContainer.jstree(); // get an instance
+          jsTreeInstance.show_stripes();
+          jsTreeInstance.show_dots();
+
+// 아래의 이벤트핸들러들은 이벤트발생(액션실행)후에 호출됨
+          $categoryContainer.on("ready.jstree", function () {
+              baseNode = jsTreeInstance.get_node("base");
+              selectedNode = baseNode;
+          });
+          $categoryContainer.on("changed.jstree", function (e, data) {
+              // (중복포함)선택시 select->changed순으로 발생
+              // (우클릭중복선택시에는 이벤트가 발생않음; selectedNode사용시 유의)
+              // (->카테생성시에 deselect()를 통해 이벤트발생을 유도함)
+              // "ready", "delete" 등 의도치 않은 이벤트를 skip
+              if (data.action != "select_node") return;
+              selectedNode = data.node;
+//console.log("ChanagedSelect: " + composeCategoryPath(null, selectedNode));
+              showReportList(selectedNode);
+          });
+          $categoryContainer.on("create_node.jstree", function (e, data) {
+              createdNode = data.node;
+          });
+
+          showReportList(cateObjArr[0]); // 기본카테고리
+          // 이 단계에서는 아래코드로 node를 얻을 수 없음 -> ready event
+          //jsTreeInstance.get_node("base");
+      }
+
+      // 카테고리에 대한 변경액션을 허용하기 위해 필요함
+      function onTreeModified(operation, node, parent, position, more) {
+          // operation: 'create_node', 'rename_node', 'delete_node',
+          //            'move_node', 'copy_node' or 'edit'
+          // 기본 cate에 대한 모든 변경액션을 거부
+          if (node == baseNode) return false;
+
+          return true; // 다른 노드에 대한 모든 변경액션은 허용
+      }
+
+      // jsTree의 노드데이타객체(JSON)를 구성(custom데이타로 보고서목록도 attach)
+      function configCategoryObject($category) {
+          var categoryObject = {text: $category.attr("name")};
+          var $container = $category.children("ReportList");
+          if ($container.length == 1) {
+              $container = $container.eq(0).children("Report");
+          }
+          if ($container.length > 0) { // 보고서가 있음
+              var reportArr = new Array($container.length);
+              $container.each(function(idx) {
+                  var me = $(this);
+                  reportArr[idx] = [me.attr("id"), me.attr("title"), me.attr("modTime")];
+              });
+              categoryObject.data = reportArr; // user data
+          } else {
+              categoryObject.data = [];
+          }
+
+          $container = $category.children("CategoryList");
+          if ($container.length == 1) {
+              $container = $container.eq(0).children("Category");
+          }
+          if ($container.length > 0) {
+              var children = new Array($container.length);
+              $container.each(function(idx) {
+                  children[idx] = configCategoryObject($(this));
+              });
+              categoryObject.children = children;
+          } else { // leaf node
+              //categoryObject.icon = false;
+          }
+
+          return categoryObject;
+      }
+
+      // 서버에서 사용하는(path가 |로 연결) 카테고리맵 문자열을 구성
+      function composeCategoryPath(childPath, node) {
+          // 직접구성하는 대신에 jstree.get_path()를 활용해도 됨
+          var thePath;
+          if (node.parent == "#") { // jsTree notation (top category)
+              if (node == baseNode) { // base는 child가 없음
+                  return null;
+              } else {
+                  thePath = node.text;
+                  if (childPath != null) thePath = thePath + "|" + childPath;
+
+                  return thePath;
+              }
+          } else {
+              thePath = node.text;
+              if (childPath != null) thePath = thePath + "|" + childPath;
+
+              return (composeCategoryPath(thePath, jsTreeInstance.get_node(node.parent)));
+          }
+      }
+
+      var createdNode; // 이벤트핸들러에서 설정
+      function createCategory(onTop) {
+          var parent = (onTop === true)? "#" : selectedNode;
+
+          var categoryName = "새 카테고리";
+          // uniq위반시(생성에서) 이벤트와 callback이 호출되지 않으므로 유일성확보
+          while (hasSameChildName(categoryName, parent)) {
+              categoryName += "-1";
+          }
+
+          jsTreeInstance.open_node(parent);
+          //jsTreeInstance.open_all(parent);
+          //var nodeObj = {text: categoryName, data: [], icon: false};
+          var nodeObj = {text: categoryName, data: []};
+          jsTreeInstance.create_node(parent, nodeObj, "last",
+              function() { // "create_node"이벤트핸들러에 이어서 호출
+                  window.setTimeout(function () { // this callback을 return
+                      handleCategoryCreation();
+                  }, 300);
+              }, true
+          );
+      }
+      function hasSameChildName(name, parentNode) {
+          var $children = jsTreeInstance.get_children_dom(parentNode);
+          for (var i = 0; i < $children.length; i++) { // each문 사용불가
+              if ($.trim($children.eq(i).text()) == name) return true;
+          }
+          return false;
+      }
+
+      // 기본(유효)명으로 local생성된 카테고리를 사용자에게 rename형식으로
+      // 새 이름을 입력받아 서버에서 생성처리후 loca에서도 생성완료처리
+      function handleCategoryCreation() {
+          var parentPath = composeCategoryPath(null, selectedNode);
+          // 아래액션들에서 createdNode가 selectedNode로 되므로 별도 유지필요
+          targetNode = selectedNode; // parent노드로 사용됨
+
+          // deselect:직전의(부모)노드를 해제해야 바로 재우클릭시 선택이벤트발생
+          jsTreeInstance.deselect_node(selectedNode); // BG바도 제거됨
+          // select_node: 새 카테고리를(부모에서) open하기 위해 필요
+          jsTreeInstance.select_node(createdNode); // 이벤트발생
+
+          jsTreeInstance.edit(createdNode, true, // 편집모드진입(원래값으로)
+              // 사용자의 편집결과 및 액션과 무관하게 항상 호출됨 (rename참조)
+              // (취소,제거,중복시에도 유효했던 원래값으로 환원되어 호출됨)
+              function (node, success, cancelled) { // 편집완료후 callback
+                  window.setTimeout(function () { // 현재 callback을 return
+                      jsTreeInstance.clear_buffer(); // 이전 실패분이 있으면 clear
+                      jsTreeInstance.cut(createdNode);
+
+                      var paramObj = {name: node.text};
+                      if (parentPath != null) paramObj.parentPath = parentPath;
+                      parent.simpleRequest.setTask("report", "category", "create");
+                      parent.simpleRequest.doRequest("GET", paramObj, onCategoryCreated, 50000, "text");
+                  }, 300);
+              }
+          );
+      }
+
+      // 서버생성 성공후에만 cut하였던 신규생성노드를 부모노드에 paste함
+      function onCategoryCreated(content) {
+          if (content) { // 서버에서 rename으로 생성한 경우
+              var changedName = jQuery.trim(content);
+              if (changedName) createdNode.text = changedName;
+          }
+
+          if (targetNode == baseNode) { // as top
+              jsTreeInstance.paste("#", "last"); // at root-node
+          } else {
+              jsTreeInstance.open_node(targetNode); // parent
+              jsTreeInstance.paste(targetNode, "last");
+          }
+          jsTreeInstance.deselect_all();
+          jsTreeInstance.select_node(targetNode); // 부모를 select
+
+          jsTreeInstance.clear_buffer(); // cut되었던 target노드를 clear
+
+          parent.showMessage("카테고리가 생성되었습니다.", true, false);
+      }
+
+      function deleteCategory() {
+          window.setTimeout(function () { // context메뉴창을 먼저 disappear
+              if (jsTreeInstance.is_leaf(selectedNode) &&
+                  selectedNode.data.length == 0) { // Non-report
+                  if (confirm("[" + selectedNode.text + "] 카테고리를 삭제하시겠습니까?")) {
+                      targetNode = selectedNode;
+                      var path = composeCategoryPath(null, selectedNode);
+                      parent.simpleRequest.setTask("report", "category", "delete");
+                      parent.simpleRequest.doRequest("GET", {"path":path}, onCategoryDeleted, 30000, "text");
+                  }
+              } else {
+                  parent.showMessage("보고서나 자식카테고리가 있는 카테고리는 삭제할 수 없습니다.", true, true);
+              }
+          }, 300);
+      }
+
+      function onCategoryDeleted() {
+          jsTreeInstance.delete_node(targetNode);
+          jsTreeInstance.select_node(baseNode);
+          parent.showMessage("카테고리가 삭제되었습니다.", true, false);
+      }
+
+      var prevCategoryName;
+      function renameCategory() {
+          // 사용자가 편집상태를 enter가 아닌 다른노드 클릭으로 종결시 변경됨
+          targetNode = selectedNode; // -> 별도 저장후 사용(생성시도 동일)
+          prevCategoryName = selectedNode.text;
+          jsTreeInstance.edit(selectedNode, true, // 편집모드진입
+              // 사용자(편집)종료 -> [이벤트(rename_node)발생] -> this호출
+              // (empty,취소시,중복값입력시에는 본래값복원, 중복값입력시-no이벤트)
+              // (다른노드를 마우스로 클릭시에도 호출되나 selectedNode변경에 유의)
+              // -> (이벤트핸들러가 아닌)항상 호출되는 이곳에서 일괄처리
+              function (node, success, cancelled) {
+                  if (prevCategoryName != node.text) { // 유효하게 변경된 경우
+                      var newName = node.text;
+                      // 이전값으로 유지후 서버반영 성공시에 사용자값으로 환원
+                      jsTreeInstance.rename_node(node, prevCategoryName);
+                      prevCategoryName = newName;
+
+                      window.setTimeout(function () { // 현재 callback을 return
+                          var path = composeCategoryPath(null, node);
+                          parent.simpleRequest.setTask("report", "category", "rename");
+                          parent.simpleRequest.doRequest("GET", {"path": path, "newName": newName}, onCategoryRenamed, 30000, "text");
+                      }, 300);
+                  }
+              }
+          );
+      }
+
+      function onCategoryRenamed() {
+          // 사용자입력값으로 환원
+          jsTreeInstance.rename_node(targetNode, prevCategoryName);
+          jsTreeInstance.deselect_all();
+          jsTreeInstance.select_node(targetNode);
+
+          parent.showMessage("카테고리이름이 변경되었습니다.", true, false);
+      }
+
+      function handleUserCreate(onTop) {
+          if (!isCategoryPanelVisible()) return;
+          if (onTop) {
+              jsTreeInstance.select_node(baseNode); // 생략시 본래선택하위에 생성됨
+              createCategory(true);
+          } else {
+              if (selectedNode == baseNode) {
+                  window.alert("기본카테고리는 자식카테고리를 가질 수 없습니다.\n" +
+                               "다른 카테고리를 선택후 다시 실행하세요.");
+              } else {
+                  var msg = "[" + selectedNode.text + "]하위에 자식카테고리를 생성하시겠습니까?";
+                  if (window.confirm(msg)) {
+                      createCategory(false);
+                  }
+              }
+          }
+      }
+
+      function handleUserRename() {
+          if (!isCategoryPanelVisible()) return;
+          if (selectedNode == baseNode) {
+              window.alert("기본카테고리의 이름은 변경할 수 없습니다.");
+          } else {
+              // Chrome에서 이벤트가 이상하게 발생하여 window.confirm사용불가
+              renameCategory();
+          }
+      }
+
+      function handleUserDelete() {
+          if (!isCategoryPanelVisible()) return;
+          if (selectedNode == baseNode) {
+              window.alert("기본카테고리는 삭제할 수 없습니다.");
+          } else {
+              deleteCategory(); // 자체적으로 confirm
+          }
+      }
+
+      function isCategoryPanelVisible() {
+          if ($categoryContainer.is(":visible")) {
+              return true;
+          } else {
+              window.alert("카테고리창을 펼친 후 실행하세요.");
+              return false;
+              //$("#collapseOne").collapse("show"); // 실행이 delay됨
+          }
+      }
+
+// 이하는 보고서 처리 함수들
+
+      function expReport(id) {
+          parent.simpleRequest.setTask("report", "repository", "export");
+          parent.simpleRequest.doRequest("GET", {reportID: id}, null, -1, null);
+      }
+
+      function del(id) {
+          var msg = "보고서 <" + id + "> 를 삭제하시겠습니까?\n";
+          msg +=    "복구가 불가하니 필요시 먼저 백업(Export)하세요.";
+          if (window.confirm(msg)) {
+              parent.simpleRequest.setTask("report", "repository", "delete");
+              parent.simpleRequest.doRequest("GET", {reportID:id}, onDeleted, 30000, "text");
+          }
+      }
+
+      function onDeleted(content) {
+          // showMessage()사용시 메세지창 close전에 다음코드가 바로실행됨
+          // -> 다음코드에서 또 서버task를 실행시 모달창중복으로 화면 frozen가능
+          //parent.showMessage("삭제되었습니다", true, false);
+          // chrome에서 이전의 modal이 사라지지않는 현상 -> 일단 callback을 return하고
+          window.setTimeout(function() {             // 스케줄링으로 다음 서버task를 수행
+              window.alert("보고서가 삭제되었습니다."); // 다음코드실행을 block하는 동기 alert
+              document.location.reload();
+          }, 300); // chrome 최소timeout
+      }
+
+      function showReportList(nodeObj) {
+          $reportList.css("display", "none");
+
+          $reportList.empty(); // tr, tbody등의 remove가 작동않음 -> 새로 구성
+          $reportList.append("<thead><tr><th>구분</th><th>ID</th><th>제목</th><th>수정일자</th><th>백업</th><th>삭제</th></tr></thead>");
+
+          var reportArr = nodeObj.data; // user custom data
+          for (var i = 0; i < reportArr.length; i++) {
+              var id = reportArr[i][0];
+              var title = reportArr[i][1] || ""; // maybe undefined
+              var modDate = parent.composeDateStr(reportArr[i][2]);
+              var row = "<tr><td>" + (i+1) + "</td><td>" + configInfoLink(id) + "</td>" +
+                        "<td>" + title + "</td><td>" + modDate + "</td>" +
+                        "<td><button type='button' class='btn btn-success' " +
+                        "onclick='expReport(\"" + id +  "\")'>Export</button></td>" +
+                        "<td><button type='button' class='btn btn-danger' " +
+                        "onclick='del(\"" + id +  "\")'>삭제</button></td></tr>";
+              $reportList.append(row);
+          }
+          if (reportArr.length == 0) {
+              $reportList.append("<tr><td colspan='6'><b>소속된 보고서가 없습니다</b></td></tr>");
+          }
+
+          $reportList.css("display", "table");
+
+          var path = "";
+          var pathArr = jsTreeInstance.get_path(nodeObj.id, false, false);
+          if (pathArr) {
+              for (var k = 0, n = pathArr.length-1; k < n; k++) {
+                  path += ("<li>" + pathArr[k] + "</li>");
+              }
+              path += ("<li class='active'>" + pathArr[pathArr.length-1] + "</li>");
+          } else { // 초기기동시 (기본카테고리)
+              path = "<li class='active'>기본카테고리</li>";
+          }
+          $categoryMap.html(path);
+      }
+      function configInfoLink(id) {
+          if (infoVer === undefined) {
+              return id;
+          } else {
+              return ("<button type='button' style='padding-left:0;' class='btn btn-link' " +
+                      "onclick='showHistory(\"" + id + "\")'>" + id + "</button>");
+          }
+      }
+      function showHistory(id) {
+          parent.simpleRequest.setTask("report", "repository", "history");
+          parent.simpleRequest.doRequest("GET", {reportID: id}, historyLoaded, 30000, "xml");
+      }
+      function historyLoaded(xml) {
+          window.setTimeout(function() {
+              showHistoryWindow(xml);
+          }, 300);
+      }
+      var newLineExp = /\n/g; // td에서 개행을 <br>로 replace하기 위해 사용
+      function showHistoryWindow(xml) {
+          var $rh = $(xml.documentElement); // root(ReportHistory)
+          var $meta = $rh.children("Meta").eq(0);
+
+          var mns = ["title", "creator", "ctime", "dVer", "dsIDs", "note"];
+          var mvs = new Array(mns.length);
+          for (var i = 0; i < mns.length; i++) {
+              mvs[i] = $meta.attr(mns[i]) || "";
+          }
+
+          var infoTable =
+          "<table class='table table-bordered' style='font-size:12px;'>" +
+          "<tr><td style='font-weight:600;'>ID</td><td>" + $meta.attr('id') + "</td><td style='font-weight:600;'>제목</td><td>" + mvs[0] + "</td></tr>" +
+          "<tr><td style='font-weight:600;'>생성자</td><td>" + mvs[1] + "</td><td style='font-weight:600;'>생성일자</td><td>" + mvs[2] + "</td></tr>" +
+          "<tr><td style='font-weight:600;'>디자이너버전</td><td>" + mvs[3] + "</td><td style='font-weight:600;'>데이타소스</td><td>" + mvs[4] + "</td></tr>" +
+          "<tr><td style='font-weight:600;vertical-align:middle;'>설명</td><td colspan='3'><textarea class='form-control' rows='2' readonly style='font-size:12px;resize:none;'>" + mvs[5] + "</textarea></td></tr>" +
+          "</table>";
+
+          var historyTable =
+          "<div style='overflow:auto; max-height:270px;'>" +
+          "<table class='table table-hover' style='font-size:12px; margin-top:20px; margin-bottom:0; min-width:560px;'>" +
+          "<thead><tr><th>수정자</th><th width='140'>수정일자</th><th>내용</th></tr></thead>";
+
+          var $history = $rh.children("History");
+          if ($history.length == 0) {
+              historyTable += ("<tr><td colspan='3'>수정내역 없음</td></tr>");
+          } else { // one
+              var $upList = $history.eq(0).children("Up");
+              var tr;
+              $upList.each(function() {
+                  var $up = $(this);
+                  var comment = $up.attr("C");
+                  if (comment) { // 개행(문자)을 처리
+                      comment = comment.replace(newLineExp, "<br>");
+                  } else {
+                      comment = "";
+                  }
+
+                  tr = "<tr><td>" + $up.attr('U') + "</td>" +
+                       "<td>" + $up.attr('T') + "</td>" +
+                       "<td>" + comment + "</td></tr>";
+                  historyTable += tr;
+              });
+          }
+          historyTable += "</table></div>";
+
+          $infoTitle.text("보고서 정보 / 수정내역");
+          $infoBody.html(infoTable + historyTable);
+          $infoDialog.modal("show");
+      }
+
+      var isCateHistory; // 카테고리 task인지 여부 (else, 보고서)
+      function showDBHistory(isCategory) {
+          isCateHistory = isCategory;
+          var task = (isCateHistory)? "category" : "repository";
+          parent.simpleRequest.setTask("report", task, "dbHistory");
+          parent.simpleRequest.doRequest("GET", null, dbHistoryLoaded, 70000, "xml");
+      }
+      function dbHistoryLoaded(xml) {
+          window.setTimeout(function() {
+              showDBHistoryWindow(xml);
+          }, 300);
+      }
+      function showDBHistoryWindow(xml) {
+          var $ah = $(xml.documentElement); // root(AdmHistory)
+          var $hList = $ah.children("His");
+
+          var historyTable =
+              "<div style='overflow:auto; max-height:300px;'>" +
+              "<table class='table table-hover' style='font-size:12px; margin-top:5px; margin-bottom:0; min-width:600px;'>";
+          if (isCateHistory) {
+              historyTable +=
+              "<thead><tr><th>구분</th><th>카테고리명</th><th>변경전 이름</th><th>작업일자</th><th>작업자</th><th>작업자 PC주소</th></tr></thead>";
+          } else {
+              historyTable +=
+              "<thead><tr><th>구분</th><th>보고서ID</th><th>작업일자</th><th>작업자</th><th>작업자 PC주소</th></tr></thead>";
+          }
+
+          if ($hList.length == 0) {
+              if (isCateHistory) {
+                  historyTable += ("<tr><td colspan='6'>변경내역 없음</td></tr>");
+              } else {
+                  historyTable += ("<tr><td colspan='5'>작업내역 없음</td></tr>");
+              }
+          } else {
+              var tr;
+              $hList.each(function() {
+                  var $row = $(this);
+                  tr = "<tr><td>" + $row.attr('T') + "</td>" +
+                       "<td>" + $row.attr('ID') + "</td>";
+                  if (isCateHistory) {
+                      tr += ("<td>" + ($row.attr('R') || "") + "</td>");
+                  }
+                  tr +=
+                      ("<td>" + parent.composeDateStr($row.attr('D')) + "</td>" +
+                       "<td>" + $row.attr('DI') + "</td>" +
+                       "<td>" + ($row.attr('DA') || "") + "</td></tr>");
+                  historyTable += tr;
+              });
+          }
+          historyTable += "</table></div>";
+
+          if (isCateHistory) {
+              $infoTitle.text("카테고리 변경내역");
+          } else {
+              $infoTitle.text("보고서 삭제 / Import 내역");
+          }
+          $infoBody.html(historyTable);
+          $infoDialog.modal("show");
+      }
+
+  </script>
+</head>
+<body>
+
+  <div class="page-header" style="margin:20px 10px 0 10px;">
+    <h1><small>보고서 목록</small></h1>
+  </div>
+
+  <div class="panel panel-default" style="margin: 0 10px 20px 10px;">
+    <div class="panel-heading" role="tab">
+      <h5 class="panel-title" style="display: inline-block;">
+        <a role="button" data-toggle="collapse" href="#collapseOne"
+           style="color: #1E90FF;">카테고리창 보기/숨기기</a>
+      </h5>
+      <div style="display:inline-block; margin-left:130px;">
+        <span style="font-weight:600; margin-right:16px;">카테고리 관리</span>
+        <button onclick="handleUserCreate(true)" title="최상위 카테고리 생성" type="button" class="btn btn-default btn-xs">최상위 생성</button>
+        <button onclick="handleUserCreate(false)" title="선택하위에 자식 카테고리 생성" type="button" class="btn btn-default btn-xs">자식 생성</button>
+        <button onclick="handleUserRename()" title="선택한 카테고리 이름 변경" type="button" class="btn btn-default btn-xs">이름 변경</button>
+        <button onclick="handleUserDelete()" title="선택한 카테고리 삭제" type="button" class="btn btn-default btn-xs">삭제</button>
+        <button onclick="showDBHistory(true)" title="카테고리 변경내역 조회" type="button" class="btn btn-primary btn-xs"
+                style="margin-left:7px;">변경내역</button>
+      </div>
+    </div>
+    <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel">
+      <div class="panel-body" id="reportCategory"></div>
+    </div>
+  </div>
+
+  <div style="margin:10px;">
+    <div>
+    <span style="font-size:1.2em; color:#a94442;">현재 카테고리 : </span>
+    <ol id="categoryMap" class="breadcrumb" style="display:inline-block; margin-bottom:10px;"></ol>
+    <button type="button" class="btn btn-primary" style="margin-left:100px;"
+            onclick="showDBHistory(false);">보고서 삭제 / Import 내역</button>
+    </div>
+
+    <table id="reportList" class="table table-hover">
+      <thead><tr><th>구분</th><th>ID</th><th>제목</th><th>수정일자</th><th>백업</th><th>삭제</th></tr></thead>
+    </table>
+  </div>
+
+  <div id="infoModal" class="modal" role="dialog" data-backdrop="static" tabindex="-1">
+    <div class="modal-dialog" role="document" style="min-width:720px;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+          <h4 class="modal-title">보고서 정보 / 수정내역</h4>
+        </div>
+        <div class="modal-body" style="padding-bottom:0;">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

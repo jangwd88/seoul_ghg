@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="dashMapper">
+
+	<select id="listSeoulOwnTarget1" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			TARGET_NUM 		AS "target_num"
+			, GIS_PK		AS "gis_pk"
+			, MGM_BLD_PK	AS "mgm_bld_pk"
+			, CONS_NM		AS "cons_nm"
+			, JUSO			AS "juso"
+			, SIGUNGU_NM	AS "sigungu_nm"
+			, BJDONG_NM		AS "bjdong_nm"
+			, TOTAREA		AS "totarea"
+			, MAIN_PURPS_NM	AS "main_purps_nm"
+			, MAIN_PURPS_CD	AS "main_purps_cd"
+			, PROP_OFFICER	AS "prop_officer"
+			, USEAPR_DAY	AS "useapr_day"
+			, ALLOW_2025	AS "allow_2025"
+			, EMISS_2025	AS "emiss_2025"
+			, REDUC_2025	AS "reduc_2025"
+			, X				AS "x"
+			, Y				AS "y"
+		FROM
+			SEOUL_OWN_TARGET_1
+	</select>
+	
+	<select id="specDashboardSeoulOwnTarget1" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			A.TARGET_NUM 		AS "target_num"
+			, A.GIS_PK		AS "gis_pk"
+			, A.MGM_BLD_PK	AS "mgm_bld_pk"
+			, A.CONS_NM		AS "cons_nm"
+			, A.JUSO			AS "juso"
+			, A.SIGUNGU_NM	AS "sigungu_nm"
+			, A.BJDONG_NM		AS "bjdong_nm"
+			, A.TOTAREA		AS "totarea"
+			, A.MAIN_PURPS_NM	AS "main_purps_nm"
+			, A.MAIN_PURPS_CD	AS "main_purps_cd"
+			, A.PROP_OFFICER	AS "prop_officer"
+			, A.USEAPR_DAY	AS "useapr_day"
+			, A.ALLOW_2025	AS "allow_2025"
+			, A.EMISS_2025	AS "emiss_2025"
+			, A.REDUC_2025	AS "reduc_2025"
+			, A.X				AS "x"
+			, A.Y				AS "y"
+			,B.TCO2EQ			AS "emiss_2020"
+		FROM
+			SEOUL_OWN_TARGET_1 A
+		JOIN
+			(SELECT MGM_BLD_PK, ROUND(SUM(TCO2EQ) , 2) AS TCO2EQ
+			FROM ENERGY_LEDGER_RENEW 
+			WHERE YEAR = '2020'
+			GROUP BY MGM_BLD_PK) B ON A.MGM_BLD_PK = B.MGM_BLD_PK
+	</select>
+	
+	<select id="viewSeoulOwnTarget1" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			TARGET_NUM 		AS "target_num"
+			, GIS_PK		AS "gis_pk"
+			, MGM_BLD_PK	AS "mgm_bld_pk"
+			, CONS_NM		AS "cons_nm"
+			, JUSO			AS "juso"
+			, SIGUNGU_NM	AS "sigungu_nm"
+			, BJDONG_NM		AS "bjdong_nm"
+			, TOTAREA		AS "totarea"
+			, MAIN_PURPS_NM	AS "main_purps_nm"
+			, MAIN_PURPS_CD	AS "main_purps_cd"
+			, PROP_OFFICER	AS "prop_officer"
+			, USEAPR_DAY	AS "useapr_day"
+			, ALLOW_2025	AS "allow_2025"
+			, EMISS_2025	AS "emiss_2025"
+			, REDUC_2025	AS "reduc_2025"
+			, X				AS "x"
+			, Y				AS "y"
+		FROM
+			SEOUL_OWN_TARGET_1
+		WHERE
+			TARGET_NUM = #{target_num }
+	</select>
+	
+	<select id="nextViewSeoulOwnTarget1" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			TARGET_NUM 		AS "target_num"
+			, GIS_PK		AS "gis_pk"
+			, MGM_BLD_PK	AS "mgm_bld_pk"
+			, CONS_NM		AS "cons_nm"
+			, JUSO			AS "juso"
+			, SIGUNGU_NM	AS "sigungu_nm"
+			, BJDONG_NM		AS "bjdong_nm"
+			, TOTAREA		AS "totarea"
+			, MAIN_PURPS_NM	AS "main_purps_nm"
+			, MAIN_PURPS_CD	AS "main_purps_cd"
+			, PROP_OFFICER	AS "prop_officer"
+			, USEAPR_DAY	AS "useapr_day"
+			, ALLOW_2025	AS "allow_2025"
+			, EMISS_2025	AS "emiss_2025"
+			, REDUC_2025	AS "reduc_2025"
+			, X				AS "x"
+			, Y				AS "y"
+		FROM
+			SEOUL_OWN_TARGET_1
+		WHERE
+			LOOP_COUNT = (SELECT MIN(LOOP_COUNT) FROM SEOUL_OWN_TARGET_1)
+	</select>
+	
+	<update id="updtNextSeoulOwnTarget1" parameterType="java.util.HashMap" >
+		UPDATE SEOUL_OWN_TARGET_1
+		SET
+			LOOP_COUNT = (SELECT MAX(LOOP_COUNT) FROM SEOUL_OWN_TARGET_1) + 1
+		WHERE
+			TARGET_NUM = #{target_num }
+	</update>
+	
+	<select id="listSeoulOwnTarget1EnergyLedger" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			ENERGY_TYPE 				AS "energy_type"
+			, ROUND(SUM(ENERGY_USE), 2) AS "energy_use"
+			, ROUND(SUM(TCO2EQ) , 2) 	AS "tco2eq"
+		FROM 
+			ENERGY_LEDGER_RENEW
+		WHERE
+			MGM_BLD_PK = #{mgm_bld_pk }
+		GROUP BY
+			ENERGY_TYPE		
+	</select>
+	
+	<select id="dashBoardListInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		
+		SELECT
+			MGM_BLD_PK				AS "mgm_bld_pk"
+			, YEAR					AS "year"
+			, MONTH					AS "month"
+			, ENERGY_TYPE			AS "energy_type"
+			, ROUND(ENERGY_USE, 2)	AS "energy_use"
+			, ROUND(TCO2EQ, 2)		AS "tco2eq"
+		FROM
+			ENERGY_LEDGER_RENEW
+		WHERE
+			MGM_BLD_PK = #{mgm_bld_pk}  
+		AND
+			YEAR = #{year}  
+		
+	</select>
+	
+	<select id="dashBoardFacilityInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			A.JUSO		AS "juso"
+			, A.TOTAREA	AS "totarea"
+			, A.MGM_BLD_PK AS "mgm_bld_pk"
+			, A.MAIN_PURPS_NM	AS "main_purps_nm"
+			, ROUND((SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) / 365) AS "useapr_day"
+		FROM
+		 	ARCH_MAIN_LEDGER_RENEW A
+		WHERE
+			A.MGM_BLD_PK =  #{mgm_bld_pk }  
+	</select>
+	
+</mapper>

@@ -1,0 +1,41 @@
+@media all {
+
+    #report
+        {
+            background-color: #ffffff;
+            z-index:-9999;
+        }
+
+    #subreport > div
+        {
+            border-width : 1px 1px;
+            border-color: #ffffff;
+            border-style: solid;
+            background-color: #ffffff;
+            //z-index:1 !important;
+        }
+
+    #report table
+        {
+            margin:0pt;
+            padding:0pt;
+            border-collapse:collapse;
+            table-layout: fixed;
+        }
+
+    #report tr
+        {
+            margin:0pt;
+            padding:0pt;
+
+        }
+
+    #report td
+        {
+            margin:0pt;
+            word-spacing:0px;
+            white-space:nowrap;
+
+        }
+   
+}

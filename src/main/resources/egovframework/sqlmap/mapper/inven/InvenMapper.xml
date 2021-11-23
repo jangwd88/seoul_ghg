@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="invenMapper">
+
+
+	<select id="selectYearList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_MIN_MAX_YYYY AS (
+		SELECT
+			MIN(A.YEAR) AS MIN_YYYY,
+			MAX(A.YEAR) AS MAX_YYYY
+		FROM
+			INV_ENG_GHG_YEAR A
+		<choose>
+		<when test='FIX_YN != null and FIX_YN != ""'>		
+		WHERE 1 = 1
+		</when>
+		<otherwise>
+		WHERE A.FIX_YN = 'Y'
+		</otherwise>
+		</choose>)
+		SELECT
+			MAX_YYYY-LEVEL + 1 AS YYYY
+		FROM
+			TEMP_MIN_MAX_YYYY
+		CONNECT BY
+			LEVEL &lt;= ((MAX_YYYY + 1)-MIN_YYYY)
+		ORDER BY
+			YYYY
+	</select>
+	
+	<select id="selectMinMaxYear" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			MIN(A.YEAR) AS MIN_YYYY,
+			MAX(A.YEAR) AS MAX_YYYY
+		FROM
+			INV_ENG_GHG_YEAR A
+	</select>
+	
+	<select id="inven001_search" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_INV_ENG_POINT AS (
+		SELECT
+			A.INV_ENG_POINT_ID,
+			A.INV_ENG_POINT_NM_1,
+			DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2) AS INV_ENG_POINT_NM_2,
+			DECODE(A.INV_ENG_POINT_NM_3, NULL, DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2), A.INV_ENG_POINT_NM_3) AS INV_ENG_POINT_NM_3,
+			DECODE(A.INV_ENG_POINT_NM_4, NULL, DECODE(A.INV_ENG_POINT_NM_3, NULL, DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2), A.INV_ENG_POINT_NM_3), A.INV_ENG_POINT_NM_4) AS INV_ENG_POINT_NM_4,
+			A.ISLEAF,
+			A.INV_ENG_POINT_CD,
+			A.UP_INV_ENG_POINT_CD
+		  FROM (SELECT
+			A.INV_ENG_POINT_ID,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 1, 'i')) AS INV_ENG_POINT_NM_1,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 2, 'i')) AS INV_ENG_POINT_NM_2,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 3, 'i')) AS INV_ENG_POINT_NM_3,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 4, 'i')) AS INV_ENG_POINT_NM_4,
+			ROWNUM AS N_ORDER,
+			CONNECT_BY_ISLEAF AS ISLEAF,
+			A.INV_ENG_POINT_CD,
+			A.UP_INV_ENG_POINT_CD
+		FROM
+			(
+			SELECT
+				A.*
+			FROM
+				INV_ENG_POINT A
+			WHERE
+				1 = 1
+				AND A.INV_ENG_POINT_DIV = '1' /*부문별*/
+				AND A.C_DEL_YN = 'N') A
+		WHERE
+			1 = 1
+			AND CONNECT_BY_ISLEAF = 1
+		START WITH
+			A.UP_INV_ENG_POINT_CD = '0'
+		CONNECT BY
+			PRIOR A.INV_ENG_POINT_CD = A.UP_INV_ENG_POINT_CD ORDER SIBLINGS BY A.N_ORDER) A),
+		TEMP_INV_ENG_GHG_YEAR AS (
+		SELECT
+		   A.INV_ENG_POINT_ID,
+		   <foreach collection="utilList" item="item" separator=",">
+		   MAX(DECODE(A.YEAR, #{item}, A.GHG_VAL, NULL)) AS GHG_VAL_${item},
+		   MAX(DECODE(A.YEAR, #{item}, A.FIX_YN, NULL)) AS FIX_YN_${item}
+		   </foreach>
+		FROM
+		   INV_ENG_GHG_YEAR A
+		GROUP BY
+		   A.INV_ENG_POINT_ID),
+		TEMP_INV_ENG_GHG_YEAR_RATIO AS (
+		SELECT
+		   A.INV_ENG_POINT_ID,
+		   <foreach collection="utilList" item="item" separator=",">
+		   MAX(DECODE(A.YEAR, #{item}, A.GHG_VAL_RATIO, NULL)) AS GHG_VAL_RATIO_${item}
+		   </foreach>
+		FROM
+		   INV_ENG_GHG_YEAR A
+		GROUP BY
+		   A.INV_ENG_POINT_ID)
+		SELECT
+		   A.INV_ENG_POINT_NM_1,
+		   A.INV_ENG_POINT_NM_2,
+		   A.INV_ENG_POINT_NM_3,
+		   A.INV_ENG_POINT_NM_4,
+		   A.ISLEAF,
+			A.INV_ENG_POINT_CD,
+			A.UP_INV_ENG_POINT_CD,
+			A.INV_ENG_POINT_ID,
+		   <foreach collection="utilList" item="item" separator=",">
+		   (TO_CHAR(B.GHG_VAL_${item}) || '&lt;br/&gt;' || DECODE(C.GHG_VAL_RATIO_${item}, NULL, '', '(' || TO_CHAR(DECODE(INSTR(C.GHG_VAL_RATIO_${item}, '.'), 1, '0' || C.GHG_VAL_RATIO_${item}, C.GHG_VAL_RATIO_${item})) || ')')) AS GHG_VAL_${item},
+		   DECODE(B.FIX_YN_${item}, 'Y', '확정', '추정') AS FIX_YN_${item}
+		   </foreach>
+		FROM
+		   TEMP_INV_ENG_POINT A,
+		   TEMP_INV_ENG_GHG_YEAR B,
+		   TEMP_INV_ENG_GHG_YEAR_RATIO C		   
+		WHERE
+		   A.INV_ENG_POINT_ID = B.INV_ENG_POINT_ID(+)
+		   AND A.INV_ENG_POINT_ID = C.INV_ENG_POINT_ID(+)
+	</select>
+	
+	<select id="inven001_search_chart" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_INV_ENG_POINT AS (
+		SELECT
+			A.INV_ENG_POINT_ID,
+			A.INV_ENG_POINT_NM_1,
+			DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2) AS INV_ENG_POINT_NM_2,
+			DECODE(A.INV_ENG_POINT_NM_3, NULL, DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2), A.INV_ENG_POINT_NM_3) AS INV_ENG_POINT_NM_3,
+			DECODE(A.INV_ENG_POINT_NM_4, NULL, DECODE(A.INV_ENG_POINT_NM_3, NULL, DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2), A.INV_ENG_POINT_NM_3), A.INV_ENG_POINT_NM_4) AS INV_ENG_POINT_NM_4,
+			A.ISLEAF,
+			A.INV_ENG_POINT_CD,
+			A.UP_INV_ENG_POINT_CD
+		  FROM (SELECT
+			A.INV_ENG_POINT_ID,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 1, 'i')) AS INV_ENG_POINT_NM_1,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 2, 'i')) AS INV_ENG_POINT_NM_2,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 3, 'i')) AS INV_ENG_POINT_NM_3,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 4, 'i')) AS INV_ENG_POINT_NM_4,
+			ROWNUM AS N_ORDER,
+			CONNECT_BY_ISLEAF AS ISLEAF,
+			A.INV_ENG_POINT_CD,
+			A.UP_INV_ENG_POINT_CD
+		FROM
+			(
+			SELECT
+				A.*
+			FROM
+				INV_ENG_POINT A
+			WHERE
+				1 = 1
+				AND A.INV_ENG_POINT_DIV = '1' /*부문별*/
+				AND A.C_DEL_YN = 'N'
+				AND A.INV_ENG_POINT_ID NOT IN ('1',
+					'3',
+					'5',
+					'7',
+					'17')/*FIX(제외항목 : 합계, 계, 소계)*/) A
+		WHERE
+			1 = 1
+			AND CONNECT_BY_ISLEAF = 1
+		START WITH
+			A.UP_INV_ENG_POINT_CD = #{UP_INV_ENG_POINT_CD}/*PARAM(배출원상위코드)*/
+		CONNECT BY
+			PRIOR A.INV_ENG_POINT_CD = A.UP_INV_ENG_POINT_CD ORDER SIBLINGS BY A.N_ORDER) A),
+		TEMP_INV_ENG_GHG_YEAR AS (
+		SELECT
+		   A.INV_ENG_POINT_ID,
+		   <foreach collection="utilList" item="item" separator=",">
+		   MAX(DECODE(A.YEAR, ${item}, A.GHG_VAL, NULL)) AS GHG_VAL_${item}
+		   </foreach>
+		FROM
+		   INV_ENG_GHG_YEAR A
+		GROUP BY
+		   A.INV_ENG_POINT_ID)
+		SELECT
+		   A.INV_ENG_POINT_NM_1,
+		   <foreach collection="utilList" item="item" separator=",">
+		   SUM(NVL(B.GHG_VAL_${item}, 0)) AS GHG_VAL_${item}
+		   </foreach>
+		FROM
+		   TEMP_INV_ENG_POINT A,
+		   TEMP_INV_ENG_GHG_YEAR B		   
+		WHERE
+		   A.INV_ENG_POINT_ID = B.INV_ENG_POINT_ID
+		GROUP BY A.INV_ENG_POINT_NM_1
+	</select>
+	
+	<select id="inven002_search" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_INV_ENG_POINT AS (
+		SELECT
+			A.INV_ENG_POINT_ID,
+			A.INV_ENG_POINT_NM_1,
+			DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2) AS INV_ENG_POINT_NM_2,
+			DECODE(A.INV_ENG_POINT_NM_3, NULL, DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2), A.INV_ENG_POINT_NM_3) AS INV_ENG_POINT_NM_3,
+			DECODE(A.INV_ENG_POINT_NM_4, NULL, DECODE(A.INV_ENG_POINT_NM_3, NULL, DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2), A.INV_ENG_POINT_NM_3), A.INV_ENG_POINT_NM_4) AS INV_ENG_POINT_NM_4
+		  FROM (SELECT
+			A.INV_ENG_POINT_ID,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 1, 'i')) AS INV_ENG_POINT_NM_1,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 2, 'i')) AS INV_ENG_POINT_NM_2,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 3, 'i')) AS INV_ENG_POINT_NM_3,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 4, 'i')) AS INV_ENG_POINT_NM_4,
+			ROWNUM AS N_ORDER
+		FROM
+			(
+			SELECT
+				A.*
+			FROM
+				INV_ENG_POINT A
+			WHERE
+				1 = 1
+				AND A.INV_ENG_POINT_DIV = '2' /*부문별*/
+				AND A.C_DEL_YN = 'N') A
+		WHERE
+			1 = 1
+			AND CONNECT_BY_ISLEAF = 1
+		START WITH
+			A.UP_INV_ENG_POINT_CD = '0'
+		CONNECT BY
+			PRIOR A.INV_ENG_POINT_CD = A.UP_INV_ENG_POINT_CD ORDER SIBLINGS BY A.N_ORDER) A),
+		TEMP_INV_ENG_GHG_YEAR AS (
+		SELECT
+		   A.INV_ENG_POINT_ID,
+		   <foreach collection="utilList" item="item" separator=",">
+		   MAX(DECODE(A.YEAR, #{item}, A.GHG_VAL, NULL)) AS GHG_VAL_${item}
+		   </foreach>
+		FROM
+		   INV_ENG_GHG_YEAR A
+		GROUP BY
+		   A.INV_ENG_POINT_ID),
+		TEMP_INV_ENG_GHG_YEAR_RATIO AS (
+		SELECT
+		   A.INV_ENG_POINT_ID,
+		   <foreach collection="utilList" item="item" separator=",">
+		   MAX(DECODE(A.YEAR, #{item}, A.GHG_VAL_RATIO, NULL)) AS GHG_VAL_RATIO_${item}
+		   </foreach>
+		FROM
+		   INV_ENG_GHG_YEAR A
+		GROUP BY
+		   A.INV_ENG_POINT_ID)
+		SELECT
+		   A.INV_ENG_POINT_NM_1,
+		   A.INV_ENG_POINT_NM_2,
+		   A.INV_ENG_POINT_NM_3,
+		   A.INV_ENG_POINT_NM_4,
+		   <foreach collection="utilList" item="item" separator=",">
+		   (TO_CHAR(B.GHG_VAL_${item}) || '&lt;br/&gt;' || DECODE(C.GHG_VAL_RATIO_${item}, NULL, '', '(' || TO_CHAR(DECODE(INSTR(C.GHG_VAL_RATIO_${item}, '.'), 1, '0'||C.GHG_VAL_RATIO_${item}, C.GHG_VAL_RATIO_${item})) || ')')) AS GHG_VAL_${item}
+		   </foreach>
+		FROM
+		   TEMP_INV_ENG_POINT A,
+		   TEMP_INV_ENG_GHG_YEAR B,
+		   TEMP_INV_ENG_GHG_YEAR_RATIO C		   
+		WHERE
+		   A.INV_ENG_POINT_ID = B.INV_ENG_POINT_ID(+)
+		   AND A.INV_ENG_POINT_ID = C.INV_ENG_POINT_ID(+)
+	</select>
+	<select id="inven003_search" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_INV_ENG_POINT AS (
+		SELECT
+			A.INV_ENG_POINT_ID,
+			A.INV_ENG_POINT_NM_1,
+			DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2) AS INV_ENG_POINT_NM_2,
+			DECODE(A.INV_ENG_POINT_NM_3, NULL, DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2), A.INV_ENG_POINT_NM_3) AS INV_ENG_POINT_NM_3,
+			DECODE(A.INV_ENG_POINT_NM_4, NULL, DECODE(A.INV_ENG_POINT_NM_3, NULL, DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2), A.INV_ENG_POINT_NM_3), A.INV_ENG_POINT_NM_4) AS INV_ENG_POINT_NM_4,
+			DECODE(A.INV_ENG_POINT_NM_5, NULL, DECODE(A.INV_ENG_POINT_NM_4, NULL, DECODE(A.INV_ENG_POINT_NM_3, NULL, DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2), A.INV_ENG_POINT_NM_3), A.INV_ENG_POINT_NM_4), A.INV_ENG_POINT_NM_5) AS INV_ENG_POINT_NM_5,
+			DECODE(A.INV_ENG_POINT_NM_6, NULL, DECODE(A.INV_ENG_POINT_NM_5, NULL, DECODE(A.INV_ENG_POINT_NM_4, NULL, DECODE(A.INV_ENG_POINT_NM_3, NULL, DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2), A.INV_ENG_POINT_NM_3), A.INV_ENG_POINT_NM_4), A.INV_ENG_POINT_NM_5), A.INV_ENG_POINT_NM_6) AS INV_ENG_POINT_NM_6
+		  FROM (SELECT
+			A.INV_ENG_POINT_ID,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 1, 'i')) AS INV_ENG_POINT_NM_1,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 2, 'i')) AS INV_ENG_POINT_NM_2,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 3, 'i')) AS INV_ENG_POINT_NM_3,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 4, 'i')) AS INV_ENG_POINT_NM_4,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 5, 'i')) AS INV_ENG_POINT_NM_5,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 6, 'i')) AS INV_ENG_POINT_NM_6,
+			ROWNUM AS N_ORDER
+		FROM
+			(
+			SELECT
+				A.*
+			FROM
+				INV_ENG_POINT A
+			WHERE
+				1 = 1
+				AND A.INV_ENG_POINT_DIV = '3' /*부문별*/
+				AND A.C_DEL_YN = 'N') A
+		WHERE
+			1 = 1
+			AND CONNECT_BY_ISLEAF = 1
+		START WITH
+			A.UP_INV_ENG_POINT_CD = '0'
+		CONNECT BY
+			PRIOR A.INV_ENG_POINT_CD = A.UP_INV_ENG_POINT_CD ORDER SIBLINGS BY A.N_ORDER) A),
+		TEMP_INV_ENG_GHG_YEAR AS (
+		SELECT
+		   A.INV_ENG_POINT_ID,
+		   <foreach collection="utilList" item="item" separator=",">
+		   MAX(DECODE(A.YEAR, #{item}, A.GHG_VAL, NULL)) AS GHG_VAL_${item}
+		   </foreach>
+		FROM
+		   INV_ENG_GHG_YEAR A
+		GROUP BY
+		   A.INV_ENG_POINT_ID)
+		SELECT
+		   A.INV_ENG_POINT_NM_1,
+		   A.INV_ENG_POINT_NM_2,
+		   A.INV_ENG_POINT_NM_3,
+		   A.INV_ENG_POINT_NM_4,
+		   A.INV_ENG_POINT_NM_5,
+		   A.INV_ENG_POINT_NM_6,
+		   <foreach collection="utilList" item="item" separator=",">
+		   NVL(B.GHG_VAL_${item}, 0) AS GHG_VAL_${item}
+		   </foreach>
+		FROM
+		   TEMP_INV_ENG_POINT A,
+		   TEMP_INV_ENG_GHG_YEAR B
+		WHERE
+		   A.INV_ENG_POINT_ID = B.INV_ENG_POINT_ID(+)
+	</select>
+	<select id="inven004_search" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_INV_ENG_POINT AS (
+		SELECT
+			A.INV_ENG_POINT_ID,
+			A.INV_ENG_POINT_NM_1,
+			DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2) AS INV_ENG_POINT_NM_2,
+			DECODE(A.INV_ENG_POINT_NM_3, NULL, DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2), A.INV_ENG_POINT_NM_3) AS INV_ENG_POINT_NM_3,
+			DECODE(A.INV_ENG_POINT_NM_4, NULL, DECODE(A.INV_ENG_POINT_NM_3, NULL, DECODE(A.INV_ENG_POINT_NM_2, NULL, A.INV_ENG_POINT_NM_1, A.INV_ENG_POINT_NM_2), A.INV_ENG_POINT_NM_3), A.INV_ENG_POINT_NM_4) AS INV_ENG_POINT_NM_4
+		  FROM (SELECT
+			A.INV_ENG_POINT_ID,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 1, 'i')) AS INV_ENG_POINT_NM_1,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 2, 'i')) AS INV_ENG_POINT_NM_2,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 3, 'i')) AS INV_ENG_POINT_NM_3,
+			TRIM(REGEXP_SUBSTR(REPLACE(SYS_CONNECT_BY_PATH(A.INV_ENG_POINT_NM, '|'), '|', '| '), '[^|]+', 1, 4, 'i')) AS INV_ENG_POINT_NM_4,
+			ROWNUM AS N_ORDER
+		FROM
+			(
+			SELECT
+				A.*
+			FROM
+				INV_ENG_POINT A
+			WHERE
+				1 = 1
+				AND A.INV_ENG_POINT_DIV = '4' /*부문별*/
+				AND A.C_DEL_YN = 'N') A
+		WHERE
+			1 = 1
+			AND CONNECT_BY_ISLEAF = 1
+		START WITH
+			A.UP_INV_ENG_POINT_CD = '0'
+		CONNECT BY
+			PRIOR A.INV_ENG_POINT_CD = A.UP_INV_ENG_POINT_CD ORDER SIBLINGS BY A.N_ORDER) A),
+		TEMP_INV_ENG_GHG_YEAR AS (
+		SELECT
+		   A.INV_ENG_POINT_ID,
+		   <foreach collection="utilList" item="item" separator=",">
+		   MAX(DECODE(A.YEAR, #{item}, A.GHG_VAL, NULL)) AS GHG_VAL_${item}
+		   </foreach>
+		FROM
+		   INV_ENG_GHG_YEAR A
+		GROUP BY
+		   A.INV_ENG_POINT_ID)
+		SELECT
+		   A.INV_ENG_POINT_NM_1,
+		   A.INV_ENG_POINT_NM_2,
+		   A.INV_ENG_POINT_NM_3,
+		   A.INV_ENG_POINT_NM_4,
+		   <foreach collection="utilList" item="item" separator=",">
+		   NVL(B.GHG_VAL_${item}, 0) AS GHG_VAL_${item}
+		   </foreach>
+		FROM
+		   TEMP_INV_ENG_POINT A,
+		   TEMP_INV_ENG_GHG_YEAR B
+		WHERE
+		   A.INV_ENG_POINT_ID = B.INV_ENG_POINT_ID
+	</select>
+</mapper>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <script type="text/javascript">
+      $(function () {
+          parent.simpleRequest.setTask("server", "comm", "list");
+          parent.simpleRequest.doRequest("GET", null, dataLoaded, 30000, "text");
+      });
+
+      function dataLoaded(result, jqXHR) {
+          var resObj = $.parseJSON(result);
+
+          var form = document.getElementById("commOptsForm");
+          if (resObj.acquireInServer === true) {
+              form.dataFetch[1].checked = true;
+          } else {
+              form.dataFetch[0].checked = true;
+          }
+
+          if (resObj.useListeningAddr == "true") {
+              form.serverAddr[0].checked = true;
+          } else if (resObj.useListeningAddr == "localhost") {
+              form.serverAddr[1].checked = true;
+          } else {
+              form.serverAddr[2].checked = true;
+              form.addr.value = resObj.useListeningAddr; // IP
+          }
+
+          if (resObj.convertScheme === true) {
+              form.convertScheme.checked = true;
+          } else {
+              form.convertScheme.checked = false;
+          }
+      }
+
+      function saveChange() {
+          var paramObj = {}; // 바로 put하기 위해 설정화일의 정의대로 구성
+          var form = document.getElementById("commOptsForm");
+          if (configServerAddrOptions(paramObj, form) == null) {
+              return; // 이미 에러메세지가 표시되었음
+          }
+          paramObj.acquireInServer = (form.dataFetch[1].checked)? "true" : "false";
+          paramObj.convertScheme = (form.convertScheme.checked)? "true" : "false";
+
+          var msg = "설정을 저장하시겠습니까?\n" +
+                    "저장된 설정은 AI서버가 재기동될때 적용됩니다.";
+          if (window.confirm(msg)) {
+              parent.simpleRequest.setTask("server", "comm", "update");
+              parent.simpleRequest.doRequest("POST", paramObj, onSaved, 50000, "text");
+          }
+      }
+
+      function onSaved(content) {
+          parent.showMessage("저장되었습니다.", true, false);
+      }
+
+      function testWebResource() {
+          var paramObj = {};
+          var form = document.getElementById("commTestForm");
+          var url = $.trim(form.testURL.value);
+          if (url.length == 0) {
+              alert("테스트할 리소스 URL을 입력하세요.");
+              return;
+          }
+          if (url.indexOf("http", 0) != 0) { // 상대 URL -> 사용자옵션을 param화
+              form = document.getElementById("commOptsForm");
+              if (configServerAddrOptions(paramObj, form) == null) {
+                  return; // 이미 에러메세지가 표시되었음
+              } // else; 두 파라미터가 설정됨 (useListeningAddr,staticLocalAddr)
+              paramObj.convertScheme = (form.convertScheme.checked)? "true" : "false";
+          }
+          paramObj.url = url;
+
+          var msg = "위에서 선택한 옵션으로 테스트를 진행합니다.\n" +
+                    "입력한 URL의 사용가능성을 테스트하시겠습니까?";
+          if (window.confirm(msg)) {
+              parent.simpleRequest.setTask("server", "comm", "test");
+              parent.simpleRequest.doRequest("POST", paramObj, onWebResourceTested, 120000, "text");
+          }
+      }
+
+      function onWebResourceTested(content, jqXHR) {
+          var result = jqXHR.getResponseHeader("AIServer-CommTestFail");
+          if (result != null) { // conn. fail
+              result = parent.decodeSpace(window.decodeURIComponent(result));
+              parent.showMessage("리소스서버에 대한 연결이 실패했습니다.<br>" + result, false, true);
+              return;
+          }
+          result = jqXHR.getResponseHeader("AIServer-CommTestRes");
+          if (result != null) { // not-success response
+              result = parent.decodeSpace(window.decodeURIComponent(result));
+              parent.showMessage("리소스서버 연결은 성공했으나 리소스획득에는 실패했습니다.<br>" + result, false, true);
+              return;
+          }
+
+          parent.showMessage("지정한 리소스의 획득에 성공했습니다.", true, false);
+      }
+
+      function configServerAddrOptions(paramObj, form) {
+          if (form.serverAddr[0].checked) {
+              paramObj.useListeningAddr = "true";
+              paramObj.staticLocalAddr = ""; // clear
+          } else if (form.serverAddr[1].checked) {
+              paramObj.useListeningAddr = "false";
+              paramObj.staticLocalAddr = ""; // clear -> localhost
+          } else {
+              if (form.addr.value.length < 3) { // cf) ::1
+                  alert("고정주소로 사용할 IP address를 입력하세요.");
+                  return null;
+              }
+              paramObj.useListeningAddr = "false";
+              paramObj.staticLocalAddr = form.addr.value;
+          }
+
+          return paramObj; // only for success mark
+      }
+
+      function testFileResource() {
+          var form = document.getElementById("commTestForm");
+          var thePath = $.trim(form.testPath.value);
+          if (thePath.length == 0) {
+              alert("테스트할 서버파일 경로를 입력하세요.");
+              return;
+          }
+
+          var paramObj = {
+              path: thePath
+          };
+          var msg = "입력한 서버파일의 사용가능성을 테스트하시겠습니까?";
+          if (window.confirm(msg)) {
+              parent.simpleRequest.setTask("server", "comm", "test");
+              parent.simpleRequest.doRequest("POST", paramObj, onFileResourceTested, 60000, "text");
+          }
+      }
+
+      function onFileResourceTested(content) {
+          var result = parseInt($.trim(content), 10);
+          if (result == -1) { // not a reg. file
+              parent.showMessage("존재하지 않거나 정규화일이 아닙니다.", true, true);
+          } else if (result == 0) {
+              parent.showMessage("지정한 서버파일에 접근할(read) 권한이 없습니다.", true, true);
+          } else { // 1: success
+              parent.showMessage("지정한 리소스의 획득에 성공했습니다.", true, false);
+          }
+      }
+  </script>
+</head>
+<body style="font-size:13px;">
+
+  <div class="page-header" style="margin:20px 10px;">
+    <h1><small>통신 환경</small></h1>
+  </div>
+
+  <div class="panel panel-success" style="margin:10px;">
+    <div class="panel-heading" style="margin-bottom:10px;">
+      <span style="font-size:15px;font-weight:900;">환경 설정 (Web)</span>
+      <span style="font-size:13px;margin-left:75px;vertical-align:sub;">현재 운영중인 옵션을 최초 표시함</span>
+    </div>
+    <form id="commOptsForm">
+    <table class="table" style="margin-bottom:5px;">
+      <tr><td>(조회시)절대URL 이미지획득</td>
+        <td><input name="dataFetch" type="radio" value="viewer" checked> AI뷰어
+            <input name="dataFetch" type="radio" value="server" style="margin-left:15px;"> AI서버
+        </td>
+        <td style="font-size:12px; vertical-align:middle;">이미지를 어디에서 획득할 것인지? (AI뷰어에서 불가능시에만 AI서버 지정)</td>
+      </tr>
+      <tr><td>상대URL에서 사용할 서버주소</td>
+        <td><input name="serverAddr" type="radio" value="auto" checked> 자동으로 결정
+            <input name="serverAddr" type="radio" value="localhost" style="margin-left:7px;"> localhost
+            <input name="serverAddr" type="radio" value="user" style="margin-left:7px;"> 고정주소
+            <input name="addr" type="text" placeholder="address ( :port 포함가능)" style="margin-left:3px;">
+        </td>
+        <td style="font-size:12px; vertical-align:middle;">리소스획득을 위해 (HTTP통신으로)접속할 현재 서버의 주소</td>
+      </tr>
+      <tr><td>상대URL에서 프로토콜 전환</td>
+        <td><input name="convertScheme" type="checkbox"> http와 https를 상호전환
+        </td>
+        <td style="font-size:12px; vertical-align:middle;">리소스획득시 보고서호출시와 다른 프로토콜을 사용할지 여부</td>
+      </tr>
+      <tr><td style="padding-top:10px;" align="center" colspan="3">
+          <button onclick="saveChange()" type="button" class="btn btn-primary btn-sm">저장하기</button>
+          </td></tr>
+    </table>
+    </form>
+  </div>
+
+  <div class="panel panel-success" style="margin:45px 10px 10px 10px;">
+    <div class="panel-heading" style="margin-bottom:10px;">
+      <span style="font-size:15px;font-weight:900;">리소스 사용가능성 테스트 (Web, 서버파일)</span>
+      <span style="font-size:13px;margin-left:75px;vertical-align:sub;">위에서 선택한 옵션을 적용함</span>
+    </div>
+    <form id="commTestForm">
+    <table class="table" style="margin-bottom:0;">
+      <tr><td>Web 리소스 사용가능성</td>
+      <td>
+        <input name="testURL" type="text" placeholder="이미지 등의 리소스 URL(절대 or 상대), 표기법 준수" style="min-width:400px;margin-right:14px;">
+        <button onclick="testWebResource()" type="button" class="btn btn-primary btn-sm">테스트</button>
+      </td>
+      <td style="font-size:12px; vertical-align:middle;">입력된 URL의 리소스를 현재 서버에서 획득할 수 있는지 테스트 (네트워크설정)</td>
+      </tr>
+      <tr><td>서버파일 리소스 사용가능성</td>
+      <td>
+        <input name="testPath" type="text" placeholder="이미지 등 리소스파일의 서버경로(절대 or 상대), 표기법 준수" style="min-width:400px;margin-right:14px;">
+        <button onclick="testFileResource()" type="button" class="btn btn-primary btn-sm">테스트</button>
+      </td>
+      <td style="font-size:12px; vertical-align:middle;">입력된 경로의 파일을 현재 서버에서 읽을 수 있는지 테스트 (Permission)</td>
+      </tr>
+    </table>
+    </form>
+  </div>
+
+</body>
+</html>

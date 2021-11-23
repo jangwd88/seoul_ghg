@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <!--<script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>-->
+  <script type="text/javascript">
+      $(function () {
+          parent.simpleRequest.setTask("server", "info", "license");
+          parent.simpleRequest.doRequest("GET", null, dataLoaded, 30000, "text");
+      });
+
+      function dataLoaded(content, jqXHR) {
+          var licStatus = jqXHR.getResponseHeader("AIServer-License");
+          if (licStatus == "0") { // granted
+              licStatus = "정상";
+          } else {
+              licStatus = window.decodeURIComponent(licStatus); // 에러메세지
+              licStatus = licStatus.replace(/\+/g, " ");
+          }
+
+          var comment = document.getElementById("comment");
+          $(comment).text(licStatus);
+          comment.style.display = "inline";
+
+          if (!content) content = "내용없음";
+          $(document.getElementById("licContent")).text(content);
+      }
+
+      function uploadLicenseFile() {
+          var form = document.getElementById("licForm");
+          if (!form.licFile.value) {
+              alert("AIReport라이센스화일을 선택하세요.");
+              return;
+          }
+
+          var msg = "유효한 라이센스인 경우 업로드후 바로 적용됩니다.\n" +
+                    "라이센스화일을 업로드하시겠습니까?";
+          if (window.confirm(msg)) {
+              parent.mulitPartRequest.setTask("server", "update", "license");
+              parent.mulitPartRequest.doRequest(form, onLicenseUploaded, 30000, "text");
+          }
+      }
+
+      function onLicenseUploaded(content) {
+          $(document.getElementById("comment")).text("정상");
+          $(document.getElementById("licContent")).text(content);
+          parent.showMessage("새 라이센스가 적용되었습니다.", true, false);
+      }
+  </script>
+</head>
+<body>
+
+  <div class="page-header" style="margin:20px 10px;">
+    <h1><small>라이센스정보</small></h1>
+    <span>라이센스상태: </span><span id="comment" class="text-danger" style="display:none;"></span>
+    <form id="licForm" method="POST" class="form-inline" style="display:inline;">
+      <label style="margin-left:80px; margin-right:10px;">라이센스화일 (AIViewer.txt)</label>
+      <input name="licFile" type="file" class="form-control" accept=".txt">
+      <button type="button" style="margin-left:15px;" class="btn btn-success" onclick="uploadLicenseFile()">Upload</button>
+    </form>
+  </div>
+
+  <div style="margin:20px 10px 10px 10px;">
+    <pre id="licContent" style="word-wrap:break-word;"></pre>
+  </div>
+
+</body>
+</html>

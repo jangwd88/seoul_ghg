@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <!--<script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>-->
+  <script type="text/javascript">
+      function requestImport() {
+          var form = document.getElementById("impForm");
+          if (!form.storeZip.value) {
+              alert("백업화일을 선택하세요.");
+              return;
+          }
+
+          var opts = document.getElementsByName('opt2');
+          for (var i = 0; i < opts.length; i++) {
+              if (opts[i].checked) {
+                  form.opt.value = opts[i].value;
+                  break;
+              }
+          }
+
+          var msg = "Import를 진행하시겠습니까?\n" +
+                    "완료시까지 꼭 대기하세요.(타임아웃10분)";
+          if (window.confirm(msg)) {
+              parent.mulitPartRequest.setTask("report", "repository", "store.import");
+              parent.mulitPartRequest.doRequest(form, onImported, 600000, "text");
+          }
+      }
+
+      function onImported(result) { // successCount,failCount
+          var idx = result.indexOf(",", 0);
+          var message = "<table><tr><td width='170'>성공한 보고서 갯수</td><td align='right'>" + result.substring(0, idx++);
+          message += "</td></tr><tr><td>실패(생략)한 갯수</td><td align='right'>" + result.substring(idx);
+          message += "</td></tr></table>";
+          parent.showMessage(message, false, false);
+      }
+  </script>
+</head>
+<body>
+
+<div style="margin:20px 10px;">
+  <div class="page-header" style="margin:0;">
+    <h1><small>전체보고서 Import</small></h1>
+  </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading" style="background-color:white;">
+      <div class="alert alert-success" role="alert" style="margin:0;">
+      * [전체보고서 Export]메뉴를 통해 백업된 화일을 현재서버에 복구(이전)<br>
+      * 백업화일에서 특정 보고서화일(zip)을 추출하여 개별적인 Import도 가능 (보고서 Import메뉴)<br>
+      * 선택옵션에 따라 개별 보고서는 독립적으로 처리됨 (성공 or 실패 or 생략)<br>
+      * 보고서의 숫자에 따라 처리시간이 길어질 수 있으므로 종료시까지 반드시 대기
+      </div>
+    </div>
+    <div class="panel-body">
+      <form id="impForm" method="POST">
+        <table>
+          <colgroup>
+            <col style="width:180px;">
+            <col style="width:320px;">
+          </colgroup>
+          <tr style="height:30px;"><td><label>전체보고서 백업화일(zip)</label></td><td><input name="storeZip" type="file" class="form-control" accept="application/zip"></td></tr>
+        </table>
+        <input type="hidden" name="opt">
+      </form>
+      <!-- IE10(and JQ)에서 form에 radio 사용시 에러 -> 분리 -->
+      <table>
+        <colgroup>
+          <col style="width:500px;">
+        </colgroup>
+        <tr><td><div class="alert alert-warning" role="alert" style="margin:7px 0; padding:5px 0;">서버에 동일(ID)보고서가 있는 경우의 처리옵션</div></td></tr>
+        <tr style="height:25px;"><td style="padding-left:15px;"><input name="opt2" type="radio" value="skip" checked> Import를 생략</td></tr>
+        <tr style="height:25px;"><td style="padding-left:15px;"><input name="opt2" type="radio" value="onNew"> 업로드한 보고서가 최신인 경우에만(.clsz화일 수정시간기준) Import</td></tr>
+        <tr style="height:25px;"><td style="padding-left:15px;"><input name="opt2" type="radio" value="force"> 무조건 Import처리</td></tr>
+        <tr style="height:50px;"><td align="right"><button type="button" onclick="requestImport()" class="btn btn-primary">Import</button></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

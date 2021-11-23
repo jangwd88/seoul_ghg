@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
+  <style type="text/css">
+    .input-changed { /* copy from [.has-error .form-control] */
+      border-color: #a94442;
+      -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+              box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+    }
+    .item-title {
+      background-color: beige;
+    }
+  </style>
+  <script type="text/javascript">
+      var updateMode; // create or update
+      var $editList;
+
+      $(function () {
+          var docURL = document.URL;
+          if (docURL.indexOf("#", 0) == -1) {
+              $(document.getElementById("modify")).text("계정생성");
+              updateMode = false;
+          } else {
+              var id = docURL.substring(docURL.indexOf("#", 0) + 1);
+              id = decodeURIComponent(id); // 다국어ID지원
+              parent.simpleRequest.setTask("core-db", "dev", "info");
+              parent.simpleRequest.doRequest("POST", {id: id}, dataLoaded, 50000, "xml");
+              updateMode = true;
+          }
+      });
+
+      function dataLoaded(xml) { // 수정인 경우
+          var $dev = $(xml).find("Dev");
+
+          document.getElementById("devID").value = $dev.attr("id");
+          document.getElementById("devID").readOnly = true;
+          document.getElementById("passwd").value = $dev.attr("passwd");
+          document.getElementById("activ").checked = ($dev.attr("activ") == "true");
+          document.getElementById("admin").checked = ($dev.attr("admin") == "true");
+          //var modDate = parent.composeDateStr($dev.attr("modDate"));
+
+          var roles = $dev.attr("roles");
+          if (roles) {
+              var roleArr = roles.split(","); // (1,3,5)형식
+              for (var k = 0; k < roleArr.length; k++) {
+                  document.getElementById("r" + roleArr[k]).checked = true;
+              }
+          }
+
+          document.getElementById("devName").value = $dev.attr("name") || "";
+
+          var options = ["corp", "title", "tel", "mail", "comment"];
+          for (var i = 0; i < options.length; i++) {
+              document.getElementById(options[i]).value = $dev.attr(options[i]) || "";
+          }
+
+          // 상태(값)이 초기화된 후에 변경 리스너를 등록해야 함
+          $editList = $(".edit");
+          $editList.change(function () { // 값변경시 처리
+              var me = $(this);
+              if (!me.hasClass("input-changed")) {
+                  me.addClass("input-changed"); // 변경 시각효과 추가
+              }
+          });
+      }
+
+      function updateDev() {
+          var paramObj = {};
+          var v, msg;
+          if (updateMode) { // 변경된 항목만 전송해야 함 (clear포함)
+              var changed = false, handled = false;
+              $editList.each(function() {
+                  if ($(this).hasClass("input-changed")) {
+                      if (this.id == "passwd") {
+                          msg = checkIDPasswd(this.value, "패스워드");
+                          if (msg) { // 에러메세지
+                              parent.showMessage(msg, true, false);
+                              handled = true;
+                              return false;  // stop looping
+                          }
+                          paramObj["passwd"] = this.value;
+                      } else if (this.tagName == "INPUT" || this.tagName == "TEXTAREA") {
+                          if (containsProhibitedChar(this.value)) {
+                              parent.showMessage("입력값 중 유효하지 않은 문자가 있습니다.", true, false);
+                              handled = true;
+                              return false;
+                          }
+                          if (this.id == "devName") {
+                              paramObj["name"] = this.value;
+                          } else {
+                              paramObj[this.id] = this.value; // clear empty가능
+                          }
+                      }
+
+                      changed = true;
+                  }
+              });
+              if (handled) return; // 에러메시지를 표시한 이후
+              if (!changed) {
+                  parent.showMessage("변경된 내용이 없습니다.", true, false);
+                  return;
+              }
+          } else { // 생성시
+              v = document.getElementById("passwd").value;
+              msg = checkIDPasswd(v, "패스워드");
+              if (msg) {
+                  parent.showMessage(msg, true, false);
+                  return;
+              }
+              paramObj["passwd"] = v;
+
+              v = document.getElementById("devName").value;
+              if (v) {
+                  if (containsProhibitedChar(v)) {
+                      parent.showMessage("입력값 중 유효하지 않은 문자가 있습니다.", true, false);
+                      return;
+                  }
+                  paramObj["name"] = v;
+              }
+
+              var options = ["corp", "title", "tel", "mail", "comment"];
+              for (var i = 0; i < options.length; i++) {
+                  v = document.getElementById(options[i]).value;
+                  if (v) {
+                      if (containsProhibitedChar(v)) {
+                          parent.showMessage("입력값 중 유효하지 않은 문자가 있습니다.", true, false);
+                          return;
+                      }
+                      paramObj[options[i]] = v;
+                  }
+              }
+          }
+
+          v = document.getElementById("devID").value;
+          msg = checkIDPasswd(v, "ID");
+          if (msg) {
+              parent.showMessage(msg, true, false);
+              return;
+          }
+          paramObj["id"] = v;
+
+          // 처리를 단순화하기 위해 activ/admin/roles는 생성/수정시 항상 처리
+          paramObj["activ"] = (document.getElementById("activ").checked)? "true" : "false";
+          var isAdmin = document.getElementById("admin").checked;
+          paramObj["admin"] = (isAdmin)? "true" : "false";
+          var roles = ""; // ServerManager의 상수값과 동기화
+          for (var k = 1; k <= 4; k++) {
+             if (document.getElementById("r"+k).checked) {
+                 roles += "," + k;
+             }
+          }
+          if (roles) roles = roles.substring(1); // 처음의 ,제거
+          if (updateMode) { // admin값이 항상 전송되므로 roles를 항상전송가능
+              paramObj["roles"] = roles; // clearing empty포함
+          } else { // 개발자 && 부가권한이 있는 경우에만 전송
+              if (!isAdmin && roles) paramObj["roles"] = roles;
+          }
+
+          if (updateMode) {
+              if (!window.confirm("계정정보를 수정하시겠습니까?")) return;
+          }
+          var job = (updateMode)? "update" : "create";
+          parent.simpleRequest.setTask("core-db", "dev", job);
+          parent.simpleRequest.doRequest("POST", paramObj, onUpdated, 60000, "text");
+      }
+
+      function onUpdated(result, jqXHR) {
+          if (jqXHR.getResponseHeader("AIServer-CoreDBFail")) {
+              // 현재는 에러처리 case가 2가지로 단순하므로 별도 구분하지 않음
+              if (updateMode) { // deleted, maybe
+                  parent.showMessage("존재하지 않는 계정입니다. 목록을 확인하세요.", true, true);
+              } else { // duplicated
+                  parent.showMessage("존재하는 ID입니다. ID값을 수정하세요.", true, true);
+              }
+              return;
+          }
+
+          window.setTimeout(function() {
+              window.alert("개발자계정이 생성(수정)되었습니다.");
+              parent.loadMainFrameDocument("dev_list.html");
+          }, 300);
+      }
+
+      function checkIDPasswd(v, fd) {
+          if (v.length < 5) {
+              return ("5글자 이상의 " + fd + "를 입력하세요.");
+          } else {
+              if (containsProhibitedChar(v)) {
+                  return (fd + " 입력값이 유효하지 않습니다.");
+              } else {
+                  return null;
+              }
+          }
+      }
+
+      var repChars = ["<", ">", "&", "\"", "'"];
+      function containsProhibitedChar(v) { // 입력금지된 5문자가 포함되었으면 true
+          if (!v) return false;
+          for (var i = 0; i < repChars.length; i++) {
+              if (v.indexOf(repChars[i], 0) != -1) return true;
+          }
+          return false;
+      }
+  </script>
+</head>
+<body>
+
+  <div class="page-header" style="margin:20px 10px 0 10px;">
+    <h1><small>개발자 정보</small></h1>
+  </div>
+
+  <div class="form-horizontal" style="width:750px; margin:15px 5px;">
+    <div class="form-group">
+      <label for="devID" class="col-xs-2 control-label item-title">ID</label>
+      <div class="col-xs-5">
+        <input type="text" class="form-control edit" id="devID" placeholder="아이디">
+      </div>
+      <span class="col-xs-5 control-label" style="text-align:left;">한글포함 40자이내 (&lt;, &gt;, &amp;, &quot;, &apos; 사용불가)</span>
+    </div>
+    <div class="form-group" style="margin-bottom:2px;">
+      <label for="passwd" class="col-xs-2 control-label item-title">패스워드</label>
+      <div class="col-xs-5">
+        <input type="password" class="form-control edit" id="passwd" placeholder="password">
+      </div>
+      <span class="col-xs-5 control-label" style="text-align:left;">40자이내 (&lt;, &gt;, &amp;, &quot;, &apos; 사용불가)</span>
+    </div>
+
+    <div class="form-group" style="margin-bottom:2px;">
+      <div class="col-xs-offset-2 col-xs-2">
+        <div class="checkbox">
+          <label style="font-weight:bold;"><input type="checkbox" id="activ" class="edit" checked>활성계정</label>
+        </div>
+      </div>
+      <span class="col-xs-8 control-label" style="text-align:left;">해제시 사용불가능 상태로 유지</span>
+    </div>
+    <div class="form-group" style="margin-bottom:15px;">
+      <div class="col-xs-offset-2 col-xs-2">
+        <div class="checkbox">
+          <label style="font-weight:bold;"><input type="checkbox" id="admin" class="edit">관리자</label>
+        </div>
+      </div>
+      <span class="col-xs-8 control-label" style="text-align:left;">선택시 모든 권한을 가진 관리자가 됨</span>
+    </div>
+
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="col-xs-2 control-label item-title">추가권한부여</label>
+      <span class="col-xs-10 control-label" style="font-size:0.8em; text-align:left;">(관리자가 아닌 일반 개발자인 경우)</span>
+    </div>
+    <div class="form-group" style="margin-bottom:2px;">
+      <div class="col-xs-offset-2 col-xs-4">
+        <div class="checkbox">
+          <label style="font-weight:bold;"><input type="checkbox" id="r1" class="edit">AI서버관리(환경설정/재기동)</label>
+        </div>
+      </div>
+      <div class="col-xs-4">
+        <div class="checkbox">
+          <label style="font-weight:bold;"><input type="checkbox" id="r2" class="edit">데이타소스관리(import/삭제)</label>
+        </div>
+      </div>
+      <span class="col-xs-2"></span>
+    </div>
+    <div class="form-group">
+      <div class="col-xs-offset-2 col-xs-4">
+        <div class="checkbox">
+          <label style="font-weight:bold;"><input type="checkbox" id="r3" class="edit">보고서 카테고리 관리</label>
+        </div>
+      </div>
+      <div class="col-xs-4">
+        <div class="checkbox">
+          <label style="font-weight:bold;"><input type="checkbox" id="r4" class="edit">라이센스 관리</label>
+        </div>
+      </div>
+      <span class="col-xs-2"></span>
+    </div>
+
+    <div class="form-group" style="margin-top:20px; margin-bottom:5px;">
+      <label class="col-xs-4" style="background-color:bisque;">기타 선택 입력항목</label>
+      <span class="col-xs-8"></span>
+    </div>
+    <div class="form-group">
+      <label for="devName" class="col-xs-2 control-label item-title">이름</label>
+      <div class="col-xs-5">
+        <input type="text" class="form-control edit" id="devName" maxlength="30" placeholder="개발자명">
+      </div>
+      <span class="col-xs-5 control-label" style="text-align:left;">이하 전체에서 &lt;, &gt;, &amp;, &quot;, &apos; 입력불가</span>
+    </div>
+    <div class="form-group">
+      <label for="corp" class="col-xs-2 control-label item-title">회사</label>
+      <div class="col-xs-5">
+        <input type="text" class="form-control edit" id="corp" maxlength="45" placeholder="소속회사명">
+      </div>
+      <span class="col-xs-5 control-label" style="text-align:left;"></span>
+    </div>
+    <div class="form-group">
+      <label for="title" class="col-xs-2 control-label item-title">직책</label>
+      <div class="col-xs-5">
+        <input type="text" class="form-control edit" id="title" maxlength="30">
+      </div>
+      <span class="col-xs-5 control-label" style="text-align:left;"></span>
+    </div>
+    <div class="form-group">
+      <label for="tel" class="col-xs-2 control-label item-title">전화번호</label>
+      <div class="col-xs-5">
+        <input type="text" class="form-control edit" id="tel" maxlength="30">
+      </div>
+      <span class="col-xs-5 control-label" style="text-align:left;"></span>
+    </div>
+    <div class="form-group">
+      <label for="mail" class="col-xs-2 control-label item-title">이메일</label>
+      <div class="col-xs-5">
+        <input type="text" class="form-control edit" id="mail" maxlength="45" placeholder="이메일주소">
+      </div>
+      <span class="col-xs-5 control-label" style="text-align:left;"></span>
+    </div>
+    <div class="form-group">
+      <label for="comment" class="col-xs-2 control-label item-title">참고사항</label>
+      <div class="col-xs-7">
+        <textarea class="form-control edit" id="comment" rows="3" maxlength="250" style="resize:none;"></textarea>
+      </div>
+      <span class="col-xs-3 control-label" style="text-align:left;">250자 이내</span>
+    </div>
+
+    <div class="form-group" style="margin-top:20px;">
+      <div class="col-xs-offset-2 col-xs-5" style="text-align:center;">
+        <button type="button" onclick="updateDev()" class="btn btn-primary" id="modify">계정수정</button>
+      </div>
+      <span class="col-xs-5"></span>
+    </div>
+  </div>
+</body>
+</html>

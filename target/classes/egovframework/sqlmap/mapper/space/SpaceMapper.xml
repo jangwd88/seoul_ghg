@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="spaceMapper">
+
+	<select id="getList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		/*+INDEX(A INDEX_DATE A INDEX_ARCH A INDEX_AREA  A INDEX_TOTAREA) */ 
+			MAIN_PURPS_NM
+			,TOTAREA
+			,YEAR
+			,MONTH
+			,ENERGY_TYPE
+			,TOE
+			,TCO2EQ
+			,SIGUNGU_NM
+			,BJDONG_NM
+		FROM
+			ENERGY_LEDGERS
+	</select>
+	
+	<select id="listEmd" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			ADMIN_CD		AS "admin_cd"
+			, ADMIN_CD_SD	AS "admin_cd_sd"
+			, ADMIN_CD_SGG	AS "admin_cd_sgg"
+			, ADMIN_CD_EMD	AS "admin_cd_emd"
+			, ADMIN_NM_SD	AS "admin_nm_sd"
+			, ADMIN_NM_SGG	AS "admin_nm_sgg"
+			, ADMIN_NM_EMD	AS "admin_nm_emd"
+		FROM
+			ADMIN_CODE
+		WHERE
+			ADMIN_CD_SGG = #{admin_cd_sgg }
+		ORDER BY 
+			ADMIN_NM_EMD
+	</select>
+	
+	<select id="listAdminHjCode" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			ADMIN_BJ_CD		AS "admin_bj_cd"
+			, ADMIN_HJ_CD	AS "admin_hj_cd"
+			, ADM_DR_CD		AS "adm_dr_cd"
+			, B.X			AS "x"
+			, B.Y			AS "y"
+		FROM
+			ADMIN_HJ_CODE A, ADMIN_CODE B
+		WHERE
+			A.ADMIN_BJ_CD = B.ADMIN_CD
+		AND
+			A.ADMIN_BJ_CD = #{admin_cd_emd }
+	</select>
+	
+	<select id="getAdminCoord" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		<if test='range == "emd" '>
+			SELECT
+				X	AS "x"
+				, Y AS "y"
+			FROM
+				ADMIN_CODE
+			WHERE
+				ADMIN_NM_EMD = #{admin_code }
+		</if>
+		<if test='range == "sgg" '>
+			SELECT
+				X	AS "x"
+				, Y AS "y"
+			FROM
+				ADMIN_CODE_SGG
+			WHERE
+				ADMIN_CD_SGG = #{admin_code }
+		</if>
+	</select>
+	
+	<select id="listMgmBldPk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			MGM_BLD_PK		AS "mgm_bld_pk"
+			, SIGUNGU_NM	AS "sigungu_nm"
+			, BJDONG_NM		AS "bjdong_nm"
+			, MAIN_PURPS_CD	AS "main_purps_cd"
+			, JUSO			AS "juso"
+			, TOTAREA		AS "totarea_sum"
+			, USEAPR_DAY	AS "useapr_day"
+		FROM
+			ARCH_MAIN_LEDGER_RENEW
+		WHERE
+			SIGUNGU_NM = #{sigungu_nm }
+		AND
+			BJDONG_NM = #{bjdong_nm }
+	</select>
+	
+	<select id="selectArchList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			B.ENERGY_TYPE	AS "energy_type"
+			, ROUND(SUM(B.ENERGY_USE), 2) 	AS "energy_use_sum"
+			, ROUND(SUM(B.TCO2EQ), 2)   		AS "tco2eq_sum"
+		FROM
+		 	ARCH_MAIN_LEDGER_RENEW A, ENERGY_LEDGER_RENEW B
+		WHERE
+			A.MGM_BLD_PK = B.MGM_BLD_PK
+	    <if test="codeList != null and codeList.size != 0">
+			AND
+				A.MAIN_PURPS_CD IN 
+				<foreach collection="codeList" item="item" index="index" separator="," open="(" close=")">
+	            	#{item}
+	            </foreach>
+	    </if>
+        <if test='start_age_ratio != ""'>
+			AND ROUND((SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) / 365 ) <![CDATA[ >= ]]>  #{start_age_ratio } 
+		</if>
+		<if test='end_age_ratio != ""'>
+			AND ROUND((SYSDATE - TO_DATE(A.USEAPR_DAY,  'YYYYMMDD')) / 365 ) <![CDATA[ <= ]]>  #{end_age_ratio } 
+		</if>
+		<if test='start_tot_area != ""'>
+			AND A.TOTAREA <![CDATA[ >= ]]>  #{start_tot_area } 
+		</if>
+		<if test='end_tot_area != ""'>
+			AND A.TOTAREA <![CDATA[ <= ]]>  #{end_tot_area } 
+		</if>
+    	<if test='energy_type_electric == "Y" and energy_type_gas == "Y" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE IN ('전기', '가스', '지역난방')
+		</if>
+		<if test='energy_type_electric == "N" and energy_type_gas == "Y" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE IN ('가스', '지역난방')
+		</if>
+		<if test='energy_type_electric == "Y" and energy_type_gas == "N" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE IN ('전기', '지역난방')
+		</if>
+		<if test='energy_type_electric == "Y" and energy_type_gas == "Y" and energy_type_local == "N"'>
+			AND B.ENERGY_TYPE IN ('전기', '가스')
+		</if>
+		<if test='energy_type_electric == "N" and energy_type_gas == "N" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE = '지역난방'
+		</if>
+		<if test='energy_type_electric == "N" and energy_type_gas == "Y" and energy_type_local == "N"'>
+			AND B.ENERGY_TYPE = '가스'
+		</if>
+		<if test='energy_type_electric == "Y" and energy_type_gas == "N" and energy_type_local == "N"'>
+			AND B.ENERGY_TYPE = '전기'
+		</if>
+     	AND
+			A.SIGUNGU_NM = #{sigungu_nm } 
+		AND
+			A.BJDONG_NM = #{bjdong_nm } 
+		AND
+			B.YEAR || B.MONTH  BETWEEN  #{start_year } || #{start_month }  AND #{end_year } || #{end_month }	
+		GROUP BY 
+			B.ENERGY_TYPE
+        
+	</select>	
+	
+	<select id="listBuildInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			A.MGM_BLD_PK	AS "mgm_bld_pk"
+			, A.JUSO		AS "juso"
+			, A.TOTAREA		AS "totarea"
+			, A.MAIN_PURPS_NM	AS "main_purps_nm"
+			, ROUND((SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) / 365) AS "useapr_day"
+			, B.ENERGY_TYPE	AS "energy_type"
+			, ROUND(SUM(B.ENERGY_USE), 2) AS "energy_use"
+			, ROUND(SUM(B.TCO2EQ), 2)   AS "tco2eq"
+		FROM
+		 	ARCH_MAIN_LEDGER_RENEW A, ENERGY_LEDGER_RENEW B
+		WHERE
+			A.MGM_BLD_PK = B.MGM_BLD_PK
+		AND
+			A.MGM_BLD_PK = #{bd_pk_1 }
+		AND
+			B.YEAR || B.MONTH  BETWEEN  #{start_year } || #{start_month }  AND #{end_year } || #{end_month }
+		<if test='energy_type_electric == "Y" and energy_type_gas == "Y" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE IN ('전기', '가스', '지역난방')
+		</if>
+		<if test='energy_type_electric == "N" and energy_type_gas == "Y" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE IN ('가스', '지역난방')
+		</if>
+		<if test='energy_type_electric == "Y" and energy_type_gas == "N" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE IN ('전기', '지역난방')
+		</if>
+		<if test='energy_type_electric == "Y" and energy_type_gas == "Y" and energy_type_local == "N"'>
+			AND B.ENERGY_TYPE IN ('전기', '가스')
+		</if>
+		<if test='energy_type_electric == "N" and energy_type_gas == "N" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE = '지역난방'
+		</if>
+		<if test='energy_type_electric == "N" and energy_type_gas == "Y" and energy_type_local == "N"'>
+			AND B.ENERGY_TYPE = '가스'
+		</if>
+		<if test='energy_type_electric == "Y" and energy_type_gas == "N" and energy_type_local == "N"'>
+			AND B.ENERGY_TYPE = '전기'
+		</if>
+		GROUP BY 
+			A.MGM_BLD_PK, A.JUSO, A.TOTAREA, A.MAIN_PURPS_NM, A.USEAPR_DAY, B.ENERGY_TYPE
+		
+	</select>
+	
+	<select id="viewBuildInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			A.MGM_BLD_PK	AS "mgm_bld_pk"
+			, A.JUSO		AS "juso"
+			, A.TOTAREA		AS "totarea"
+			, A.MAIN_PURPS_NM	AS "main_purps_nm"
+			, ROUND((SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) / 365) AS "useapr_day"
+		FROM
+		 	ARCH_MAIN_LEDGER_RENEW A
+		WHERE
+			A.MGM_BLD_PK = #{bd_pk_1 }
+	</select>
+	
+	<select id="listBuildEnergyInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			ENERGY_TYPE 				AS "energy_type"
+			, ROUND(SUM(ENERGY_USE), 2) AS "energy_use"
+			, ROUND(SUM(TCO2EQ) , 2) 	AS "tco2eq"
+		FROM 
+			ENERGY_LEDGER_RENEW
+		WHERE
+			MGM_BLD_PK = #{bd_pk_1 }
+		GROUP BY
+			ENERGY_TYPE	
+	</select>
+	
+	<select id="listSameJusoBuild" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+	  		CONS_NM 		AS "cons_nm"
+		  	, DONG_NM		AS "dong_nm"
+		  	, MAIN_PURPS_NM	AS "main_purps_nm"
+		   	, ROUND((SYSDATE - TO_DATE(USEAPR_DAY, 'YYYYMMDD')) / 365) AS "useapr_day"
+		  	, TOTAREA		AS "totarea"
+		FROM
+			ARCH_ALL_LEDGER_RENEW
+		WHERE
+			JUSO = (SELECT JUSO FROM ARCH_MAIN_LEDGER_RENEW WHERE MGM_BLD_PK = #{bd_pk_1 })
+	</select>
+	
+	<select id="selectDistrictList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			B.ENERGY_TYPE	AS "energy_type"
+			, ROUND(SUM(B.ENERGY_USE), 2) AS "energy_use_sum"
+			, ROUND(SUM(B.TCO2EQ), 2)   AS "tco2eq_sum"
+		FROM
+		 	ARCH_MAIN_LEDGER_RENEW A, ENERGY_LEDGER_RENEW B
+		WHERE
+			A.MGM_BLD_PK = B.MGM_BLD_PK
+    	<if test='energy_type_electric == "Y" and energy_type_gas == "Y" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE IN ('전기', '가스', '지역난방')
+		</if>
+		<if test='energy_type_electric == "N" and energy_type_gas == "Y" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE IN ('가스', '지역난방')
+		</if>
+		<if test='energy_type_electric == "Y" and energy_type_gas == "N" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE IN ('전기', '지역난방')
+		</if>
+		<if test='energy_type_electric == "Y" and energy_type_gas == "Y" and energy_type_local == "N"'>
+			AND B.ENERGY_TYPE IN ('전기', '가스')
+		</if>
+		<if test='energy_type_electric == "N" and energy_type_gas == "N" and energy_type_local == "Y"'>
+			AND B.ENERGY_TYPE = '지역난방'
+		</if>
+		<if test='energy_type_electric == "N" and energy_type_gas == "Y" and energy_type_local == "N"'>
+			AND B.ENERGY_TYPE = '가스'
+		</if>
+		<if test='energy_type_electric == "Y" and energy_type_gas == "N" and energy_type_local == "N"'>
+			AND B.ENERGY_TYPE = '전기'
+		</if>
+     	AND
+			A.SIGUNGU_NM = #{sigungu_nm }
+		<if test='bjdong_nm != "전체" '>
+			AND A.BJDONG_NM = #{bjdong_nm } 
+		</if>
+		AND
+			B.YEAR || B.MONTH  BETWEEN  #{start_year } || #{start_month }  AND #{end_year } || #{end_month }	
+		GROUP BY 
+			B.ENERGY_TYPE
+	</select>	
+	
+	<select id="listJuso" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+			DISTINCT(JUSO) 	AS "juso"
+		FROM
+			ARCH_MAIN_LEDGER_RENEW
+		WHERE
+			JUSO like '%'||#{juso}||'%'
+	</select>
+	
+	<select id="listBuildInfoByJuso" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			A.JUSO		AS "juso"
+			, A.TOTAREA	AS "totarea"
+			, A.MGM_BLD_PK AS "mgm_bld_pk"
+			, A.CONS_NM AS "cons_nm"
+			, A.MAIN_PURPS_NM	AS "main_purps_nm"
+			, A.USEAPR_DAY AS "useapr_day"
+<!-- 			, ROUND((SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) / 365) AS "useapr_day" -->
+			, A.X	AS "x"
+			, A.Y	AS "y"
+		FROM
+		 	ARCH_MAIN_LEDGER_RENEW A
+		WHERE
+			A.JUSO =  #{search_juso}  
+	</select>
+	
+	<select id="viewBuildInfoByMgmBldPk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			A.JUSO		AS "juso"
+			, A.TOTAREA	AS "totarea"
+			, A.MGM_BLD_PK AS "mgm_bld_pk"
+			, A.MAIN_PURPS_NM	AS "main_purps_nm"
+			, ROUND((SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) / 365) AS "useapr_day"
+		FROM
+		 	ARCH_MAIN_LEDGER_RENEW A
+		WHERE
+			A.MGM_BLD_PK =  #{mgm_bld_pk }  
+	</select>
+	
+	<select id="listBuildEnergyInfoByMonth" parameterType="java.util.HashMap" resultType="java.util.HashMap">	
+		SELECT
+			MGM_BLD_PK				AS "mgm_bld_pk"
+			, YEAR					AS "year"
+			, MONTH					AS "month"
+			, ENERGY_TYPE			AS "energy_type"
+			, ROUND(ENERGY_USE, 2)	AS "energy_use"
+			, ROUND(TCO2EQ, 2)		AS "tco2eq"
+		FROM
+			ENERGY_LEDGER_RENEW
+		WHERE
+			MGM_BLD_PK = #{mgm_bld_pk}  
+		AND
+			YEAR = #{year}
+		ORDER BY ENERGY_TYPE, MONTH ASC 
+		
+	</select>
+	
+	<select id="viewJusoInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			  A.JUSO		AS "juso"
+			, A.TOTAREA		AS "totarea"
+			, A.MAIN_PURPS_NM	AS "main_purps_nm"
+			, ROUND((SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) / 365) AS "useapr_day"
+			, B.ENERGY_TYPE	AS "energy_type"
+			, ROUND(SUM(B.ENERGY_USE), 2) AS "energy_use"
+			, ROUND(SUM(B.TCO2EQ), 2)   AS "tco2eq"
+		FROM
+		 	ARCH_MAIN_LEDGER_RENEW A, ENERGY_LEDGER_RENEW B
+		WHERE
+			A.MGM_BLD_PK = B.MGM_BLD_PK
+		AND
+			A.JUSO =  #{search_juso} 
+		AND
+			B.YEAR =  #{start_year } 
+		AND
+			B.ENERGY_TYPE IN ('전기', '가스', '지역난방')
+		GROUP BY 
+			A.MGM_BLD_PK, A.JUSO, A.TOTAREA, A.MAIN_PURPS_NM, A.USEAPR_DAY, B.ENERGY_TYPE	
+	</select>
+	
+	<select id="spaceArchList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			B.ENERGY_TYPE	AS "energy_type"
+			, ROUND(SUM(B.ENERGY_USE), 2) AS "energy_use_sum"
+			, ROUND(SUM(B.TCO2EQ), 2)   AS "tco2eq_sum"
+		FROM
+		 	ARCH_MAIN_LEDGER_RENEW A, ENERGY_LEDGER_RENEW B
+		WHERE
+			A.MGM_BLD_PK = B.MGM_BLD_PK
+		AND
+			A.JUSO IN 
+			<foreach collection="jusoList" item="item" index="index" separator="," open="(" close=")">
+            	#{item}
+            </foreach>
+		GROUP BY 
+			B.ENERGY_TYPE
+	</select>	
+	
+	<select id="listArch" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			MGM_BLD_PK		AS "mgm_bld_pk"
+			, SIGUNGU_NM	AS "sigungu_nm"
+			, BJDONG_NM		AS "bjdong_nm"
+			, MAIN_PURPS_NM	AS "main_purps_nm"
+			, MAIN_PURPS_CD	AS "main_purps_cd"
+			, JUSO			AS "juso"
+			, CONS_NM		AS "cons_nm"
+			, TOTAREA		AS "totarea"
+			, USEAPR_DAY	AS "useapr_day"
+			, X				AS "x"
+			, Y				AS "y"
+		FROM
+			ARCH_MAIN_LEDGER_RENEW
+		WHERE
+			SIGUNGU_NM = #{sigungu_nm } 
+		<if test='bjdong_nm != "전체" '>
+			AND BJDONG_NM = #{bjdong_nm } 
+		</if>
+	    <if test="codeList != null and codeList.size != 0">
+			AND
+				MAIN_PURPS_CD IN 
+				<foreach collection="codeList" item="item" index="index" separator="," open="(" close=")">
+	            	#{item}
+	            </foreach>
+	    </if>
+        <if test='start_age_ratio != ""'>
+			AND ROUND((SYSDATE - TO_DATE(USEAPR_DAY, 'YYYYMMDD')) / 365 ) <![CDATA[ >= ]]>  #{start_age_ratio } 
+		</if>
+		<if test='end_age_ratio != ""'>
+			AND ROUND((SYSDATE - TO_DATE(USEAPR_DAY, 'YYYYMMDD')) / 365 ) <![CDATA[ <= ]]>  #{end_age_ratio } 
+		</if>
+		<if test='start_tot_area != ""'>
+			AND TOTAREA <![CDATA[ >= ]]>  #{start_tot_area } 
+		</if>
+		<if test='end_tot_area != ""'>
+			AND TOTAREA <![CDATA[ <= ]]>  #{end_tot_area } 
+		</if>
+
+	</select>	
+	
+	<select id="checkUserLikeBuild" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+			
+		SELECT
+			COUNT(1) AS "count"
+		FROM
+			USER_LIKE_BUILD
+		WHERE
+			ADMIN_ID = #{admin_id }
+		AND
+			MGM_BLD_PK = #{mgm_bld_pk }
+
+	</select>
+	
+	<insert id="setUserLikeBuild" parameterType="java.util.HashMap">
+		INSERT INTO USER_LIKE_BUILD
+		(
+			ADMIN_ID,
+			MGM_BLD_PK,
+			ORDER_SEQ,
+			REGI_ID,
+			REGI_DATE
+		)
+		VALUES
+		(
+			#{admin_id},
+			#{mgm_bld_pk},
+			'1',
+			#{admin_id},
+			sysdate
+		)		
+		
+	</insert>
+	
+	<delete id="setUserUnlikeBuild" parameterType="java.util.HashMap">
+		DELETE FROM USER_LIKE_BUILD
+		WHERE
+			ADMIN_ID = #{admin_id }
+		AND
+			MGM_BLD_PK = #{mgm_bld_pk }
+	</delete>
+	
+	<select id="selectListUserLikeBuild" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT 
+  			B.MGM_BLD_PK AS "mgm_bld_pk"
+		,   A.CONS_NM AS "cons_nm"
+		,   A.JUSO AS "juso"
+		,   A.USEAPR_DAY AS "useapr_day"
+		,   A.TOTAREA AS "totarea"
+		,	A.X AS "x"
+		,	A.Y AS "y"
+		FROM ARCH_MAIN_LEDGER_RENEW A , USER_LIKE_BUILD B
+		WHERE
+   			A.MGM_BLD_PK = B.MGM_BLD_PK
+		AND 
+   			B.ADMIN_ID = #{admin_id};
+	</select>
+	
+	
+	<select id="fnViewBuildByInfoMainPurpsNm" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT * 
+		FROM TOTAL_AMT_TARGET
+	</select>
+	
+</mapper>

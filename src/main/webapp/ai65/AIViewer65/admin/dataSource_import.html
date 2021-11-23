@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <script type="text/javascript">
+      function requestImport() {
+          var form = document.getElementById("impForm");
+          if (!form.dsZip.value) {
+              alert("데이타소스 백업화일을 선택하세요.");
+              return;
+          }
+
+          var opts = document.getElementsByName('opt2');
+          for (var i = 0; i < opts.length; i++) {
+              if (opts[i].checked) {
+                  form.opt.value = opts[i].value;
+                  break;
+              }
+          }
+
+          var msg = "데이타소스를 Import하시겠습니까?\n" +
+                    "완료시까지 꼭 대기하세요.(타임아웃3분)";
+          if (window.confirm(msg)) {
+              parent.mulitPartRequest.setTask("data", "dataSource", "import");
+              parent.mulitPartRequest.doRequest(form, onImported, 180000, "text");
+          }
+      }
+
+      function onImported(result) {
+          if (result && ($.trim(result).length > 0)) {
+              if (result == "Skipped") {
+                  parent.showMessage("데이타소스 import가 생략되었습니다.", true, true);
+              } else {
+                  parent.showMessage("데이타소스 import가 실패했습니다.<br>" + result, false, true);
+              }
+          } else {
+              parent.showMessage("데이타소스가 import되었습니다.", true, false);
+          }
+      }
+  </script>
+</head>
+<body>
+
+<div style="margin:20px 10px;">
+  <div class="page-header" style="margin:0;">
+    <h1><small>데이타소스 Import</small></h1>
+  </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading" style="background-color:white;">
+      <div class="alert alert-success" role="alert" style="margin:0;">
+      * Export된 데이타소스를 현재서버로 이전<br>
+      * 동일한 ID의 데이타소스를 이전하는 경우 처리옵션의 선택에 유의해야함<br>
+      * 새로운 데이타소스인 경우 JDBC드라이버 등 사용클래스의 배치와 기타 관련설정이 선행되어야함<br>
+      * JDBC드라이버 로딩, DB연결 등 일정 시간이 소요되는 작업이므로 종료시까지 반드시 대기
+      </div>
+    </div>
+    <div class="panel-body">
+      <form id="impForm" method="POST">
+        <table>
+          <colgroup>
+            <col style="width:180px;">
+            <col style="width:320px;">
+          </colgroup>
+          <tr style="height:30px;"><td><label>데이타소스 백업화일(zip)</label></td><td><input name="dsZip" type="file" class="form-control" accept="application/zip"></td></tr>
+        </table>
+        <input type="hidden" name="opt">
+      </form>
+      <!-- IE10(and JQ)에서 form에 radio 사용시 에러 -> 분리 -->
+      <table>
+        <colgroup>
+          <col style="width:500px;">
+        </colgroup>
+        <tr><td><div class="alert alert-warning" role="alert" style="margin:7px 0; padding:5px 0;">서버에 동일(ID) 데이타소스가 있는 경우의 처리옵션</div></td></tr>
+        <tr style="height:25px;"><td style="padding-left:15px;"><input name="opt2" type="radio" value="skip" checked> Import를 생략</td></tr>
+        <tr style="height:25px;"><td style="padding-left:15px;"><input name="opt2" type="radio" value="onNew"> 업로드한 데이타소스가 최신인 경우에만(CLASS화일 수정시간기준) Import</td></tr>
+        <tr style="height:25px;"><td style="padding-left:15px;"><input name="opt2" type="radio" value="force"> 무조건 Import처리</td></tr>
+        <tr style="height:50px;"><td align="right"><button type="button" onclick="requestImport()" class="btn btn-primary">Import</button></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

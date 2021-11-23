@@ -1,0 +1,165 @@
+2020-12-28 09:40:17,690  INFO [AIServer] - Starting.....version(6.5.1.4/20201202)
+2020-12-28 09:40:17,690  INFO [AIServer] - LogManager configed; FileLoggerHandler
+2020-12-28 09:40:17,695  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[TempDirectoryCleaner] by 31 minutes
+2020-12-28 09:40:18,356  INFO [AIServer] - (AIServer.constructor)HSQLDB not usable: java.lang.ClassNotFoundException: aireport.hsqldb.jdbc.JDBCDriver
+2020-12-28 09:40:18,421  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[PreviewCleaner] by 17 minutes
+2020-12-28 09:40:18,421  INFO [AIServer] - (TaskScheduler.scheduleDailyTask)Scheduled[FileLoggerHandler] at {14:33, 1:35}
+2020-12-28 09:40:18,421  INFO [AIServer] - (testHtmlParserEnvironment)HTML library(aireport-cssbox-4.x.jar) not deployed
+2020-12-28 09:40:18,421  INFO [AIServer] - (configFontManager:0)Runtime locale: ko_KR
+2020-12-28 09:40:18,421  INFO [AIServer] - (configFontManager:1)Applying user locale-lang: ko
+2020-12-28 09:40:18,749  INFO [AIServer] - ReportFontManager registered fonts in <C:\eGovFrameDev-3.8.0-64bit\workspace\.metadata\.plugins\org.eclipse.wst.server.core\tmp0\wtpwebapps\project_seoul_monitoring\ai65\AIReport65\Fonts>: 
+2020-12-28 09:40:18,872  INFO [AIServer] - (configFontManager:3)Font list: [Code2000, 나눔고딕]
+2020-12-28 09:40:18,872  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[FileCacheManager] by 10 minutes
+2020-12-28 09:40:18,872  INFO [AIServer] - Started successfully
+2020-12-28 11:02:50,460  INFO [AIServer] - Stopped!!!
+
+2020-12-28 11:02:58,033  INFO [AIServer] - Starting.....version(6.5.1.4/20201202)
+2020-12-28 11:02:58,033  INFO [AIServer] - LogManager configed; FileLoggerHandler
+2020-12-28 11:02:58,037  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[TempDirectoryCleaner] by 31 minutes
+2020-12-28 11:02:58,702  INFO [AIServer] - (AIServer.constructor)HSQLDB not usable: java.lang.ClassNotFoundException: aireport.hsqldb.jdbc.JDBCDriver
+2020-12-28 11:02:58,765  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[PreviewCleaner] by 17 minutes
+2020-12-28 11:02:58,765  INFO [AIServer] - (TaskScheduler.scheduleDailyTask)Scheduled[FileLoggerHandler] at {14:33, 1:35}
+2020-12-28 11:02:58,766  INFO [AIServer] - (testHtmlParserEnvironment)HTML library(aireport-cssbox-4.x.jar) not deployed
+2020-12-28 11:02:58,766  INFO [AIServer] - (configFontManager:0)Runtime locale: ko_KR
+2020-12-28 11:02:58,766  INFO [AIServer] - (configFontManager:1)Applying user locale-lang: ko
+2020-12-28 11:02:58,771  INFO [AIServer] - ReportFontManager registered fonts in <C:\eGovFrameDev-3.8.0-64bit\workspace\.metadata\.plugins\org.eclipse.wst.server.core\tmp0\wtpwebapps\project_seoul_monitoring\ai65\AIReport65\Fonts>: 
+2020-12-28 11:02:58,891  INFO [AIServer] - (configFontManager:3)Font list: [Code2000, 나눔고딕]
+2020-12-28 11:02:58,894  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[FileCacheManager] by 10 minutes
+2020-12-28 11:02:58,896  INFO [AIServer] - Started successfully
+2020-12-28 11:02:58,903  INFO [AIServer] - Stopped!!!
+
+2020-12-28 11:03:32,278  INFO [AIServer] - Starting.....version(6.5.1.4/20201202)
+2020-12-28 11:03:32,278  INFO [AIServer] - LogManager configed; FileLoggerHandler
+2020-12-28 11:03:32,282  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[TempDirectoryCleaner] by 31 minutes
+2020-12-28 11:03:32,959  INFO [AIServer] - (AIServer.constructor)HSQLDB not usable: java.lang.ClassNotFoundException: aireport.hsqldb.jdbc.JDBCDriver
+2020-12-28 11:03:33,027  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[PreviewCleaner] by 17 minutes
+2020-12-28 11:03:33,027  INFO [AIServer] - (TaskScheduler.scheduleDailyTask)Scheduled[FileLoggerHandler] at {14:33, 1:35}
+2020-12-28 11:03:33,028  INFO [AIServer] - (testHtmlParserEnvironment)HTML library(aireport-cssbox-4.x.jar) not deployed
+2020-12-28 11:03:33,028  INFO [AIServer] - (configFontManager:0)Runtime locale: ko_KR
+2020-12-28 11:03:33,028  INFO [AIServer] - (configFontManager:1)Applying user locale-lang: ko
+2020-12-28 11:03:33,286  INFO [AIServer] - ReportFontManager registered fonts in <C:\eGovFrameDev-3.8.0-64bit\workspace\.metadata\.plugins\org.eclipse.wst.server.core\tmp0\wtpwebapps\project_seoul_monitoring\ai65\AIReport65\Fonts>: 
+2020-12-28 11:03:33,498  INFO [AIServer] - (configFontManager:3)Font list: [Code2000, 나눔고딕]
+2020-12-28 11:03:33,502  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[FileCacheManager] by 10 minutes
+2020-12-28 11:03:33,505  INFO [AIServer] - Started successfully
+2020-12-28 11:03:33,527  INFO [AIServer] - Stopped!!!
+
+2020-12-28 11:04:53,933  INFO [AIServer] - Starting.....version(6.5.1.4/20201202)
+2020-12-28 11:04:53,933  INFO [AIServer] - LogManager configed; FileLoggerHandler
+2020-12-28 11:04:53,933  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[TempDirectoryCleaner] by 31 minutes
+2020-12-28 11:04:54,604  INFO [AIServer] - (AIServer.constructor)HSQLDB not usable: java.lang.ClassNotFoundException: aireport.hsqldb.jdbc.JDBCDriver
+2020-12-28 11:04:54,667  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[PreviewCleaner] by 17 minutes
+2020-12-28 11:04:54,667  INFO [AIServer] - (TaskScheduler.scheduleDailyTask)Scheduled[FileLoggerHandler] at {14:33, 1:35}
+2020-12-28 11:04:54,667  INFO [AIServer] - (testHtmlParserEnvironment)HTML library(aireport-cssbox-4.x.jar) not deployed
+2020-12-28 11:04:54,667  INFO [AIServer] - (configFontManager:0)Runtime locale: ko_KR
+2020-12-28 11:04:54,667  INFO [AIServer] - (configFontManager:1)Applying user locale-lang: ko
+2020-12-28 11:04:54,950  INFO [AIServer] - ReportFontManager registered fonts in <C:\eGovFrameDev-3.8.0-64bit\workspace\.metadata\.plugins\org.eclipse.wst.server.core\tmp0\wtpwebapps\project_seoul_monitoring\ai65\AIReport65\Fonts>: 
+2020-12-28 11:04:55,154  INFO [AIServer] - (configFontManager:3)Font list: [Code2000, 나눔고딕]
+2020-12-28 11:04:55,154  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[FileCacheManager] by 10 minutes
+2020-12-28 11:04:55,154  INFO [AIServer] - Started successfully
+2020-12-28 11:04:55,185  INFO [AIServer] - Stopped!!!
+
+2020-12-28 11:05:23,253  INFO [AIServer] - Starting.....version(6.5.1.4/20201202)
+2020-12-28 11:05:23,253  INFO [AIServer] - LogManager configed; FileLoggerHandler
+2020-12-28 11:05:23,253  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[TempDirectoryCleaner] by 31 minutes
+2020-12-28 11:05:23,919  INFO [AIServer] - (AIServer.constructor)HSQLDB not usable: java.lang.ClassNotFoundException: aireport.hsqldb.jdbc.JDBCDriver
+2020-12-28 11:05:23,981  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[PreviewCleaner] by 17 minutes
+2020-12-28 11:05:23,981  INFO [AIServer] - (TaskScheduler.scheduleDailyTask)Scheduled[FileLoggerHandler] at {14:33, 1:35}
+2020-12-28 11:05:23,981  INFO [AIServer] - (testHtmlParserEnvironment)HTML library(aireport-cssbox-4.x.jar) not deployed
+2020-12-28 11:05:23,981  INFO [AIServer] - (configFontManager:0)Runtime locale: ko_KR
+2020-12-28 11:05:23,981  INFO [AIServer] - (configFontManager:1)Applying user locale-lang: ko
+2020-12-28 11:05:24,231  INFO [AIServer] - ReportFontManager registered fonts in <C:\eGovFrameDev-3.8.0-64bit\workspace\.metadata\.plugins\org.eclipse.wst.server.core\tmp0\wtpwebapps\project_seoul_monitoring\ai65\AIReport65\Fonts>: 
+2020-12-28 11:05:24,431  INFO [AIServer] - (configFontManager:3)Font list: [Code2000, 나눔고딕]
+2020-12-28 11:05:24,431  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[FileCacheManager] by 10 minutes
+2020-12-28 11:05:24,431  INFO [AIServer] - Started successfully
+2020-12-28 11:05:24,462  INFO [AIServer] - Stopped!!!
+
+2020-12-28 11:14:09,052  INFO [AIServer] - Starting.....version(6.5.1.4/20201202)
+2020-12-28 11:14:09,052  INFO [AIServer] - LogManager configed; FileLoggerHandler
+2020-12-28 11:14:09,068  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[TempDirectoryCleaner] by 31 minutes
+2020-12-28 11:14:09,745  INFO [AIServer] - (AIServer.constructor)HSQLDB not usable: java.lang.ClassNotFoundException: aireport.hsqldb.jdbc.JDBCDriver
+2020-12-28 11:14:09,811  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[PreviewCleaner] by 17 minutes
+2020-12-28 11:14:09,812  INFO [AIServer] - (TaskScheduler.scheduleDailyTask)Scheduled[FileLoggerHandler] at {14:33, 1:35}
+2020-12-28 11:14:09,813  INFO [AIServer] - (testHtmlParserEnvironment)HTML library(aireport-cssbox-4.x.jar) not deployed
+2020-12-28 11:14:09,813  INFO [AIServer] - (configFontManager:0)Runtime locale: ko_KR
+2020-12-28 11:14:09,813  INFO [AIServer] - (configFontManager:1)Applying user locale-lang: ko
+2020-12-28 11:14:10,137  INFO [AIServer] - ReportFontManager registered fonts in <C:\eGovFrameDev-3.8.0-64bit\workspace\.metadata\.plugins\org.eclipse.wst.server.core\tmp0\wtpwebapps\project_seoul_monitoring\ai65\AIReport65\Fonts>: 
+2020-12-28 11:14:10,272  INFO [AIServer] - (configFontManager:3)Font list: [Code2000, 나눔고딕]
+2020-12-28 11:14:10,275  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[FileCacheManager] by 10 minutes
+2020-12-28 11:14:10,277  INFO [AIServer] - Started successfully
+2020-12-28 13:23:40,462  INFO [AIServer] - Stopped!!!
+
+2020-12-28 13:23:56,778  INFO [AIServer] - Starting.....version(6.5.1.4/20201202)
+2020-12-28 13:23:56,778  INFO [AIServer] - LogManager configed; FileLoggerHandler
+2020-12-28 13:23:56,783  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[TempDirectoryCleaner] by 31 minutes
+2020-12-28 13:23:57,464  INFO [AIServer] - (AIServer.constructor)HSQLDB not usable: java.lang.ClassNotFoundException: aireport.hsqldb.jdbc.JDBCDriver
+2020-12-28 13:23:57,533  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[PreviewCleaner] by 17 minutes
+2020-12-28 13:23:57,534  INFO [AIServer] - (TaskScheduler.scheduleDailyTask)Scheduled[FileLoggerHandler] at {14:33, 1:35}
+2020-12-28 13:23:57,534  INFO [AIServer] - (testHtmlParserEnvironment)HTML library(aireport-cssbox-4.x.jar) not deployed
+2020-12-28 13:23:57,534  INFO [AIServer] - (configFontManager:0)Runtime locale: ko_KR
+2020-12-28 13:23:57,534  INFO [AIServer] - (configFontManager:1)Applying user locale-lang: ko
+2020-12-28 13:23:57,888  INFO [AIServer] - ReportFontManager registered fonts in <C:\eGovFrameDev-3.8.0-64bit\workspace\.metadata\.plugins\org.eclipse.wst.server.core\tmp0\wtpwebapps\project_seoul_monitoring\ai65\AIReport65\Fonts>: 
+2020-12-28 13:23:58,040  INFO [AIServer] - (configFontManager:3)Font list: [Code2000, 나눔고딕]
+2020-12-28 13:23:58,043  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[FileCacheManager] by 10 minutes
+2020-12-28 13:23:58,046  INFO [AIServer] - Started successfully
+2020-12-28 14:58:05,508  INFO [AIServer] - Stopped!!!
+
+2020-12-28 14:58:14,568  INFO [AIServer] - Starting.....version(6.5.1.4/20201202)
+2020-12-28 14:58:14,568  INFO [AIServer] - LogManager configed; FileLoggerHandler
+2020-12-28 14:58:14,575  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[TempDirectoryCleaner] by 31 minutes
+2020-12-28 14:58:15,402  INFO [AIServer] - (AIServer.constructor)HSQLDB not usable: java.lang.ClassNotFoundException: aireport.hsqldb.jdbc.JDBCDriver
+2020-12-28 14:58:15,492  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[PreviewCleaner] by 17 minutes
+2020-12-28 14:58:15,494  INFO [AIServer] - (TaskScheduler.scheduleDailyTask)Scheduled[FileLoggerHandler] at {14:33, 1:35}
+2020-12-28 14:58:15,494  INFO [AIServer] - (testHtmlParserEnvironment)HTML library(aireport-cssbox-4.x.jar) not deployed
+2020-12-28 14:58:15,495  INFO [AIServer] - (configFontManager:0)Runtime locale: ko_KR
+2020-12-28 14:58:15,495  INFO [AIServer] - (configFontManager:1)Applying user locale-lang: ko
+2020-12-28 14:58:15,502  INFO [AIServer] - ReportFontManager registered fonts in <C:\eGovFrameDev-3.8.0-64bit\workspace\.metadata\.plugins\org.eclipse.wst.server.core\tmp0\wtpwebapps\project_seoul_monitoring\ai65\AIReport65\Fonts>: 
+2020-12-28 14:58:15,635  INFO [AIServer] - (configFontManager:3)Font list: [Code2000, 나눔고딕]
+2020-12-28 14:58:15,637  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[FileCacheManager] by 10 minutes
+2020-12-28 14:58:15,640  INFO [AIServer] - Started successfully
+2020-12-28 14:58:22,224  INFO [AIServer] - Stopped!!!
+
+2020-12-28 14:58:33,531  INFO [AIServer] - Starting.....version(6.5.1.4/20201202)
+2020-12-28 14:58:33,531  INFO [AIServer] - LogManager configed; FileLoggerHandler
+2020-12-28 14:58:33,535  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[TempDirectoryCleaner] by 31 minutes
+2020-12-28 14:58:34,237  INFO [AIServer] - (AIServer.constructor)HSQLDB not usable: java.lang.ClassNotFoundException: aireport.hsqldb.jdbc.JDBCDriver
+2020-12-28 14:58:34,303  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[PreviewCleaner] by 17 minutes
+2020-12-28 14:58:34,304  INFO [AIServer] - (TaskScheduler.scheduleDailyTask)Scheduled[FileLoggerHandler] at {14:33, 1:35}
+2020-12-28 14:58:34,305  INFO [AIServer] - (testHtmlParserEnvironment)HTML library(aireport-cssbox-4.x.jar) not deployed
+2020-12-28 14:58:34,305  INFO [AIServer] - (configFontManager:0)Runtime locale: ko_KR
+2020-12-28 14:58:34,305  INFO [AIServer] - (configFontManager:1)Applying user locale-lang: ko
+2020-12-28 14:58:34,631  INFO [AIServer] - ReportFontManager registered fonts in <C:\eGovFrameDev-3.8.0-64bit\workspace\.metadata\.plugins\org.eclipse.wst.server.core\tmp0\wtpwebapps\project_seoul_monitoring\ai65\AIReport65\Fonts>: 
+2020-12-28 14:58:34,785  INFO [AIServer] - (configFontManager:3)Font list: [Code2000, 나눔고딕]
+2020-12-28 14:58:34,789  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[FileCacheManager] by 10 minutes
+2020-12-28 14:58:34,792  INFO [AIServer] - Started successfully
+2020-12-28 17:46:19,965  INFO [AIServer] - Stopped!!!
+
+2020-12-28 17:46:19,995  INFO [AIServer] - Starting.....version(6.5.1.4/20201202)
+2020-12-28 17:46:19,995  INFO [AIServer] - LogManager configed; FileLoggerHandler
+2020-12-28 17:46:19,997  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[TempDirectoryCleaner] by 31 minutes
+2020-12-28 17:46:20,679  INFO [AIServer] - (AIServer.constructor)HSQLDB not usable: java.lang.ClassNotFoundException: aireport.hsqldb.jdbc.JDBCDriver
+2020-12-28 17:46:20,682  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[PreviewCleaner] by 17 minutes
+2020-12-28 17:46:20,682  INFO [AIServer] - (TaskScheduler.scheduleDailyTask)Scheduled[FileLoggerHandler] at {14:33, 1:35}
+2020-12-28 17:46:20,683  INFO [AIServer] - (testHtmlParserEnvironment)HTML library(aireport-cssbox-4.x.jar) not deployed
+2020-12-28 17:46:20,683  INFO [AIServer] - (configFontManager:0)Runtime locale: ko_KR
+2020-12-28 17:46:20,683  INFO [AIServer] - (configFontManager:1)Applying user locale-lang: ko
+2020-12-28 17:46:20,685  INFO [AIServer] - ReportFontManager registered fonts in <C:\eGovFrameDev-3.8.0-64bit\workspace\.metadata\.plugins\org.eclipse.wst.server.core\tmp0\wtpwebapps\project_seoul_monitoring\ai65\AIReport65\Fonts>: 
+2020-12-28 17:46:20,737  INFO [AIServer] - (configFontManager:3)Font list: [Code2000, 나눔고딕]
+2020-12-28 17:46:20,737  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[FileCacheManager] by 10 minutes
+2020-12-28 17:46:20,737  INFO [AIServer] - Started successfully
+2020-12-28 17:47:08,321  INFO [AIServer] - Stopped!!!
+
+2020-12-28 17:48:13,773  INFO [AIServer] - Starting.....version(6.5.1.4/20201202)
+2020-12-28 17:48:13,773  INFO [AIServer] - LogManager configed; FileLoggerHandler
+2020-12-28 17:48:13,777  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[TempDirectoryCleaner] by 31 minutes
+2020-12-28 17:48:14,442  INFO [AIServer] - (AIServer.constructor)HSQLDB not usable: java.lang.ClassNotFoundException: aireport.hsqldb.jdbc.JDBCDriver
+2020-12-28 17:48:14,504  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[PreviewCleaner] by 17 minutes
+2020-12-28 17:48:14,505  INFO [AIServer] - (TaskScheduler.scheduleDailyTask)Scheduled[FileLoggerHandler] at {14:33, 1:35}
+2020-12-28 17:48:14,505  INFO [AIServer] - (testHtmlParserEnvironment)HTML library(aireport-cssbox-4.x.jar) not deployed
+2020-12-28 17:48:14,505  INFO [AIServer] - (configFontManager:0)Runtime locale: ko_KR
+2020-12-28 17:48:14,505  INFO [AIServer] - (configFontManager:1)Applying user locale-lang: ko
+2020-12-28 17:48:14,817  INFO [AIServer] - ReportFontManager registered fonts in <C:\eGovFrameDev-3.8.0-64bit\workspace\.metadata\.plugins\org.eclipse.wst.server.core\tmp0\wtpwebapps\project_seoul_monitoring\ai65\AIReport65\Fonts>: 
+2020-12-28 17:48:14,942  INFO [AIServer] - (configFontManager:3)Font list: [Code2000, 나눔고딕]
+2020-12-28 17:48:14,945  INFO [AIServer] - (TaskScheduler.schedulePeriodicTask)Scheduled[FileCacheManager] by 10 minutes
+2020-12-28 17:48:14,947  INFO [AIServer] - Started successfully
+2020-12-28 17:50:45,535  INFO [AIServer] - Stopped!!!
+

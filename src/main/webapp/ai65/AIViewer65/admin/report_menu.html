@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <!--<script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>-->
+  <script type="text/javascript">
+      $(function () {
+          //parent.clearMainFrame();
+          parent.loadMainFrameDocument("report_list.html");
+      });
+  </script>
+</head>
+<body style="font-family:'맑은 고딕',Arial,sans-serif;">
+
+<div class="btn-group btn-group-lg" style="margin:5px;">
+  <button type="button" class="btn btn-info btn-block"
+          onclick="parent.loadMainFrameDocument('report_list.html')">보고서 목록</button>
+  <button type="button" class="btn btn-info btn-block"
+          onclick="parent.loadMainFrameDocument('report_import.html')">보고서 Import</button>
+  <button type="button" class="btn btn-info btn-block"
+          onclick="parent.loadMainFrameDocument('store_export.html')">전체보고서 Export</button>
+  <button type="button" class="btn btn-info btn-block"
+          onclick="parent.loadMainFrameDocument('store_import.html')">전체보고서 Import</button>
+</div>
+
+</body>
+</html>

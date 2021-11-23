@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="bbsMapper">
+
+	<insert id="insertBbs" parameterType="HashMap">
+		<selectKey keyProperty="bbs_no"  resultType="Integer"  order="BEFORE">
+			SELECT
+				NVL(MAX(BBS_NO), 0) + 1 AS "bbs_no"
+			FROM
+				TB_BBS
+		</selectKey>
+		INSERT INTO TB_BBS
+		(
+			BBS_NO,
+			BBS_TYPE,
+			BBS_SUBJECT,
+			BBS_CONTENT,
+			REGI_USER,
+			REGI_DATE
+		)
+		VALUES
+		(
+			#{bbs_no},
+			#{bbs_type},
+			#{bbs_subject},
+			#{bbs_content},
+			#{regi_user},
+			sysdate
+		)
+	</insert>
+	
+	<select id="read" resultType="BbsVO">
+		SELECT
+			*
+		FROM 
+			TB_BBS 
+		WHERE
+			BBS_NO = #{bbs_no}
+	</select>
+	
+	<update id="update" parameterType="BbsVO">
+		UPDATE 
+			TB_BBS 
+		SET
+			BBS_TYPE = #{bbs_type}
+			, BBS_SUBJECT = #{bbs_subject}
+			, BBS_CONTENT = #{bbs_content}
+		WHERE
+			BBS_NO = #{bbs_no}
+	</update>
+	
+	<update id="procUpdate" parameterType="HashMap" >
+		UPDATE 
+			TB_BBS 
+		SET
+			BBS_TYPE = #{bbs_type}
+			, BBS_SUBJECT = #{bbs_subject}
+			, BBS_CONTENT = #{bbs_content}
+		WHERE 
+			BBS_NO = #{bbs_no}
+	</update>	
+	
+
+	<delete id="delete">
+		DELETE FROM TB_BBS
+		WHERE
+			BBS_NO = #{bbs_no}
+	</delete>
+	
+	<sql id="search">
+		<choose>
+			<when test= 'type = "BBS_SUBJECT"'>
+				WHERE BBS_SUBJECT LIKE  '%'||#{keyword}||'%'
+			</when>
+			<when test='type == "REGI_USER"'>
+				WHERE REGI_USER LIKE  '%'||#{keyword}||'%'
+			</when>
+		</choose>
+	</sql>
+	
+		<select id="listAll" parameterType="map" resultType="BbsVO">
+		SELECT * FROM (
+			SELECT ROWNUM AS rn, A.*
+			 FROM(
+				SELECT
+					BBS_NO,BBS_TYPE,BBS_SUBJECT,BBS_CONTENT,REGI_USER,REGI_DATE
+				FROM TB_BBS
+				<include refid="search"></include>
+				ORDER BY BBS_NO ASC, REGI_DATE DESC
+				) A
+			)
+		WHERE rn BETWEEN #{start} AND #{finish}
+	</select>
+	
+	<select id="getCount" resultType="int">
+		SELECT COUNT(*) FROM TB_BBS
+	</select>
+	
+	<select id="getList" resultType="BbsVO" parameterType="map">
+		SELECT * FROM (
+			SELECT ROWNUM AS rn, A.* FROM(
+				SELECT*
+				FROM TB_BBS
+				ORDER BY BBS_NO DESC, REGI_DATE DESC
+				) A
+			) WHERE rn BETWEEN #{start}
+		AND #{finish}
+	</select>
+	
+</mapper>

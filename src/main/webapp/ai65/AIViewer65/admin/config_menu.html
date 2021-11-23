@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
+  <script type="text/javascript">
+      $(function () {
+          //parent.clearMainFrame();
+          parent.loadMainFrameDocument("server.html");
+      });
+
+      function loadEnvPage(mode) {
+          // anchor만으로는 브라우저가 페이지를 reload않음 -> 가변param으로 동적링크화
+          var url = "environment.html?_=" + new Date().getTime() + "#" + mode;
+          parent.loadMainFrameDocument(url);
+      }
+
+      function reloadServer() {
+          var msg = "운영경로관련 설정을 변경한 경우에는 재기동할 수 없습니다.\n";
+          msg += "실제 운영중인 서버의 경우 꼭 필요한 경우에만 재기동하세요.\n";
+          msg += "AI서버를 재기동하시겠습니까?";
+
+          if (window.confirm(msg)) {
+              window.alert("재기동이 완료될 때까지 대기하세요.");
+              parent.simpleRequest.setTask("server", "reload", "abs");
+              parent.simpleRequest.doRequest("GET", null, onReloaded, 300000, "text");
+          }
+      }
+      function onReloaded(content) {
+          window.setTimeout(function() {
+              window.alert("AI서버가 재기동되었습니다.");
+              parent.mainWin.contentWindow.location.reload();
+          }, 300);
+      }
+  </script>
+</head>
+<body style="font-family:'맑은 고딕',Arial,sans-serif;">
+
+<div class="btn-group btn-group-lg" style="margin:5px;">
+  <button type="button" class="btn btn-info btn-block"
+          onclick="parent.loadMainFrameDocument('server.html')">기본정보</button>
+  <div class="btn-group btn-group-lg btn-block">
+    <button type="button" class="btn btn-info btn-block dropdown-toggle" data-toggle="dropdown">
+      환경변수 <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-right">
+      <li><a href="#" onclick="loadEnvPage('current');return false;">운영중인 환경변수</a></li>
+      <li><a href="#" onclick="loadEnvPage('saved');return false;">저장된 환경변수</a></li>
+    </ul>
+  </div>
+  <button type="button" class="btn btn-info btn-block"
+          onclick="parent.loadMainFrameDocument('comm_env.html')">통신 환경</button>
+  <button type="button" class="btn btn-info btn-block"
+          onclick="parent.loadMainFrameDocument('log.html')">로그화일</button>
+  <button type="button" class="btn btn-info btn-block"
+          onclick="parent.loadMainFrameDocument('license.html')">라이센스정보</button>
+  <button type="button" class="btn btn-success btn-block"
+          onclick="parent.loadMainFrameDocument('dev_list.html')">개발자 관리</button>
+  <button type="button" class="btn btn-danger btn-block"
+          onclick="reloadServer()">AI서버 재기동</button>
+</div>
+
+</body>
+</html>

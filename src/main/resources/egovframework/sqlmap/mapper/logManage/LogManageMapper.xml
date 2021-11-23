@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="logManageMapper">
+
+
+	<select id="logInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	SELECT
+			ACC_SN as "acc_sn"
+		,	USER_ID as "user_id"
+		,	ACC_URL as "acc_url"
+		,	REGI_DATE as "regi_date"
+		FROM
+			TB_MENU_ACCESS_LOG
+	</select>
+
+    <!-- 접속 로그 리스트 조회 -->
+    <select id="listAccessLog" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT
+               A.SEQNO                                     AS "seqno"
+             , A.PROG_URL                                  AS "progUrl"
+             , (SELECT PROG_NM FROM SYS_PROG
+                 WHERE PROG_PTTRN = A.PROG_URL)            AS "progNm"
+             , A.USER_NO                                   AS "userNo"
+             , (SELECT NAME FROM USER_INFO
+                 WHERE ADMIN_ID = A.USER_NO)               AS "userNm"
+             , A.CNTN_SE_CD                                AS "cntnSeCd"
+             , TO_CHAR(A.CNTN_DT, 'YYYY-MM-DD HH24:MI:SS') AS "cntnDt"
+             , A.CNTN_YR                                   AS "cntnYr"
+             , A.CNTN_MM                                   AS "cntnMm"
+             , A.CNTN_DD                                   AS "cntnDd"
+             , A.IP_ADDR                                   AS "ipAddr"
+             , A.SERVER_NM                                 AS "serverNm"
+             , A.ROW_NO                                    AS "rowNo"
+          FROM (SELECT S.*
+                     , ROW_NUMBER()    OVER (ORDER BY S.SEQNO DESC) AS ROW_NO
+                  FROM SYS_CNTN_LOG S
+                 WHERE 0 = 0
+                   AND EXISTS(SELECT 1
+                                FROM SYS_PROG
+                               WHERE PROG_PTTRN = S.PROG_URL)
+          ) A
+          WHERE 0 = 0
+          AND   A.ROW_NO BETWEEN (#{pagesize} * (#{pno}-1) +1) AND (#{pagesize} * #{pno})
+    </select>
+
+    <select id="listAccessLogCount" parameterType="java.util.HashMap" resultType="int">
+        SELECT
+               COUNT(*)
+          FROM SYS_CNTN_LOG S
+         WHERE 0 = 0
+           AND EXISTS(SELECT 1
+                        FROM SYS_PROG
+                       WHERE PROG_PTTRN = S.PROG_URL)
+    </select>
+
+</mapper>

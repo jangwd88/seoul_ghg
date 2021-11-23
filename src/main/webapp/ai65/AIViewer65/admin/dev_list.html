@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
+  <script type="text/javascript">
+      var $devList;
+
+      $(function () {
+          $devList = $(document.getElementById("devList"));
+
+          parent.simpleRequest.setTask("core-db", "dev", "list");
+          parent.simpleRequest.doRequest("GET", null, dataLoaded, 50000, "xml");
+      });
+
+      function dataLoaded(xml) {
+          $devList.css("display", "none");
+
+          var dvList = $(xml).find("Dev");
+          dvList.each(function(index) {
+              var $me = $(this);
+              var id = $me.attr("id");
+              var name = $me.attr("name") || ""; // maybe undefined
+              var corp = $me.attr("corp") || ""; // maybe undefined
+              var activ = ($me.attr("activ") == "true")? "Yes" : "No";
+              var admin = ($me.attr("admin") == "true")? "Yes" : "No";
+              var modDate = parent.composeDateStr($me.attr("modDate"));
+              var delDisaled = ($me.attr("defAccnt"))? "disabled " : "";
+
+              var row = "<tr><td>" + id + "</td>" + "<td>" + name + "</td>" +
+                        "<td>" + corp + "</td><td>" + activ + "</td>" +
+                        "<td>" + admin + "</td><td>" + modDate + "</td>" +
+                        "<td><button type='button' class='btn btn-warning' " +
+                        "onclick='loadInfoPage(\"" + id +  "\")'>수정</button></td>" +
+                        "<td><button type='button' class='btn btn-danger' " + delDisaled +
+                        "onclick='delDev(\"" + id +  "\")'>삭제</button></td></tr>";
+              $devList.append(row);
+          });
+          var linkRow =
+            "<tr><td colspan='4'></td><td colspan='4'><button type='button' onclick='loadInfoPage()' class='btn btn-primary'>계정추가</button></td></tr>";
+          $devList.append(linkRow);
+
+          $devList.css("display", "table");
+      }
+
+      function delDev(id) {
+          var msg = "계정 <" + id + ">을 삭제하시겠습니까?\n";
+          msg +=    "비활성 처리로 사용만 금지할 수도 있습니다.";
+          if (window.confirm(msg)) {
+              parent.simpleRequest.setTask("core-db", "dev", "delete");
+              parent.simpleRequest.doRequest("POST", {id:id}, onDeleted, 50000, "text");
+          }
+      }
+
+      function onDeleted(content) {
+          window.setTimeout(function() {
+              window.alert("계정이 삭제되었습니다.");
+              document.location.reload();
+          }, 300);
+      }
+
+      function loadInfoPage(devID) { // config_menu.loadEnvPage 참조
+          // anchor만으로는 브라우저가 페이지를 reload않음 -> 가변param으로 동적링크화
+          var url = "dev_info.html?_=" + new Date().getTime();
+          if (devID) url += "#" + encodeURIComponent(devID); // 수정인 경우
+          parent.loadMainFrameDocument(url);
+      }
+  </script>
+</head>
+<body>
+
+  <div class="page-header" style="margin:20px 10px 0 10px;">
+    <h1><small>개발자 목록</small></h1>
+  </div>
+
+  <div style="margin:10px;">
+    <table id="devList" class="table table-hover">
+      <thead><tr><th>ID</th><th>이름</th><th>회사</th><th>활성계정</th><th>관리자</th><th>수정일자</th><th>수정</th><th>삭제</th></tr></thead>
+    </table>
+  </div>
+
+</body>
+</html>

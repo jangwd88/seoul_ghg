@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <!--<script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>-->
+  <script type="text/javascript">
+      function requestExport() {
+          var opt;
+          var opts = document.getElementsByName('opt');
+          for (var i = 0; i < opts.length; i++) {
+              if (opts[i].checked) {
+                  opt = opts[i].value;
+                  break;
+              }
+          }
+
+          var msg = "Export를 진행하시겠습니까?\n";
+          parent.simpleRequest.setTask("report", "repository", "store.export");
+          if (opt == "download") {
+              msg = msg + "완료시까지 꼭 대기하세요.";
+              if (window.confirm(msg)) {
+                  parent.simpleRequest.doRequest("GET", {opt: opt}, null, -1, null);
+              }
+          } else if (opt == "save") { // ajax(10분)
+              msg = msg + "완료시까지 꼭 대기하세요.(타임아웃10분)";
+              if (window.confirm(msg)) {
+                  parent.simpleRequest.doRequest("GET", {opt: opt}, onExported, 600000, "text");
+              }
+          } else { // savedown
+              msg = msg + "AIReportHome/Var 경로에 다운로드화일명으로 저장됩니다.";
+              if (window.confirm(msg)) {
+                  parent.simpleRequest.doRequest("GET", {opt: opt}, null, -1, null);
+              }
+          }
+      }
+
+      function onExported(result) {
+          var message = "AIReportHome/Var 경로에 아래 이름으로 저장되었습니다.<br>" + result;
+          parent.showMessage(message, false, false);
+      }
+  </script>
+</head>
+<body>
+
+<div style="margin:20px 10px;">
+  <div class="page-header" style="margin:0;">
+    <h1><small>전체보고서 Export</small></h1>
+  </div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading" style="background-color:white;">
+      <div class="alert alert-success" role="alert" style="margin:0;">
+      * AI서버가 운영중인 모든 보고서를 단일화일로 백업하는 기능<br>
+      * 백업된 화일은 [전체보고서 Import]메뉴를 통해 AI서버간에 이전(복구)가능<br>
+      * 보고서의 숫자에 따라 처리시간이 길어질 수 있으므로 종료시까지 반드시 대기
+      </div>
+    </div>
+    <div class="panel-body">
+      <table>
+        <colgroup>
+          <col style="width:500px;">
+        </colgroup>
+        <tr><td><div class="alert alert-warning" role="alert" style="margin:7px 0; padding:5px 0;">처리옵션</div></td></tr>
+        <tr style="height:25px;"><td style="padding-left:15px;"><input name="opt" type="radio" value="download" checked> Export후 다운로드</td></tr>
+        <tr style="height:25px;"><td style="padding-left:15px;"><input name="opt" type="radio" value="save"> Export후 서버에 저장</td></tr>
+        <tr style="height:25px;"><td style="padding-left:15px;"><input name="opt" type="radio" value="savedown"> Export후 서버에 저장하고 다운로드</td></tr>
+        <tr style="height:50px;"><td align="right"><button type="button" onclick="requestExport()" class="btn btn-primary">Export</button></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

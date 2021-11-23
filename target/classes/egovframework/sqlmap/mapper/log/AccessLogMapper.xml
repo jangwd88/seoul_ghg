@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="accessLogMapper">
+
+    <!-- 페이지 접속 로그   -->
+    <insert id="regiAccessLog" parameterType="java.util.Map">
+        INSERT INTO SYS_CNTN_LOG (
+              SEQNO
+            , PROG_URL
+            , USER_NO
+            , CNTN_SE_CD
+            , CNTN_YR
+            , CNTN_MM
+            , CNTN_DD
+            , CNTN_DT
+            , IP_ADDR
+            , SERVER_NM
+        ) VALUES (
+              SEQ_CNTN_LOG.nextval
+            , #{progNm}
+            , #{userNo}
+            , #{cntnSeCd}
+            , to_char(sysdate, 'yyyy')
+            , to_char(sysdate, 'mm')
+            , to_char(sysdate, 'dd')
+            , systimestamp
+            , #{userIp}
+            , #{serverNm}
+        )
+    </insert>
+
+</mapper>

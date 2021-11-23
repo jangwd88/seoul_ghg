@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-config.dtd">
+
+<configuration>
+    <settings>
+        <setting name="jdbcTypeForNull" value="NULL" />                 <!-- NULL 허용 -->
+    </settings>
+
+    <typeAliases>
+		<typeAlias alias="egovMap" type="egovframework.rte.psl.dataaccess.util.EgovMap"/>
+		<typeAlias alias="bbsVO" type="egovframework.seoul.entity.BbsVO"/>
+<!-- 		<typeAlias alias="searchVO" type="egovframework.example.sample.service.SampleDefaultVO"/> -->
+<!-- 		<typeAlias alias="sampleVO" type="egovframework.example.sample.service.SampleVO"/> -->
+    </typeAliases>
+    <plugins>
+		<plugin interceptor="egovframework.seoul.interceptor.MybatisLogInterceptor" />
+	</plugins>
+    <mappers>
+    	<mapper resource="egovframework/sqlmap/mapper/stat/StatMapper.xml" />
+    	<mapper resource="egovframework/sqlmap/mapper/inven/InvenMapper.xml" />
+    	<mapper resource="egovframework/sqlmap/mapper/invenCal/InvenCalMapper.xml" />
+    	<mapper resource="egovframework/sqlmap/mapper/standInfo/StandInfoMapper.xml" />
+    	<mapper resource="egovframework/sqlmap/mapper/space/SpaceMapper.xml" />
+    	<mapper resource="egovframework/sqlmap/mapper/bbs/BbsMapper.xml" />
+  		<mapper resource="egovframework/sqlmap/mapper/dash/DashMapper.xml" />
+  		<mapper resource="egovframework/sqlmap/mapper/spec/SpecMapper.xml" />
+  		<mapper resource="egovframework/sqlmap/mapper/dataManage/DataManageMapper.xml" />
+
+  		<mapper resource="egovframework/sqlmap/mapper/userManage/UserManageMapper.xml" />
+  		<mapper resource="egovframework/sqlmap/mapper/authManage/AuthManageMapper.xml" />
+  		<mapper resource="egovframework/sqlmap/mapper/logManage/LogManageMapper.xml" />
+  		<mapper resource="egovframework/sqlmap/mapper/codeManage/CodeManageMapper.xml" />
+  		<mapper resource="egovframework/sqlmap/mapper/main/MainMapper.xml" />
+
+  		<mapper resource="egovframework/sqlmap/mapper/log/AccessLogMapper.xml" />
+    </mappers>
+</configuration>

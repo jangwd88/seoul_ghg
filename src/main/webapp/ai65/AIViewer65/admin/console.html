@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="images/favicon.ico">
+
+    <title>AIReport :: Admin console</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+    <link href="bootstrap/css/ie10-viewport-bug-workaround.css" rel="stylesheet">
+    <!-- Custom styles for this template -->
+    <link href="bootstrap/css/sticky-footer-navbar.css" rel="stylesheet">
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+    <script src="js/html5shiv.min.js"></script>
+    <script src="js/respond.min.js"></script>
+    <![endif]-->
+
+    <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+    <!--[if lt IE 10]>
+    <script src="js/jquery.form-3.51.min.js"></script><![endif]-->
+
+    <script type="text/javascript" src="js/activeintra.js"></script>
+    <script type="text/javascript" src="js/activeintra-comm.js"></script>
+    <script type="text/javascript">
+        var simpleRequest, mulitPartRequest;
+        var leftContainer, mainContainer, mainWin;
+        var loadingDialog, alertDialog, alertMsg, alertClose;
+        var loginDialog, userLogined = false;
+
+        $(function () {
+            simpleRequest = new activeintra.comm.SimpleRequest("mainFrame");
+            mulitPartRequest = new activeintra.comm.MultiPartRequest("mainFrame");
+
+            leftContainer = $("#leftContainer");
+            mainContainer = $("#mainContainer");
+            mainWin = document.getElementsByName("mainFrame").item(0);
+
+            loadingDialog = $("#loadingDialog");
+            alertDialog = $("#alertDialog");
+            alertMsg = $("#alertMsg");
+            alertClose = $("#alertClose");
+            alertDialog.on("shown.bs.modal", function(e) {
+                alertClose.focus();
+            });
+
+            loginDialog = $("#loginDialog");
+            loginDialog.on("shown.bs.modal", function(e) {
+                var inputEle = document.getElementById("adminPasswd");
+                inputEle.value = "";
+                inputEle.focus();
+                inputEle = document.getElementById("adminID");
+                if (! inputEle.value) inputEle.focus();
+            });
+
+            $(".nav li a").click(function(e) {
+                $(".nav li").removeClass("active");
+                $(this).parent().addClass("active");
+                return true;
+            });
+
+            onResize();
+            // this html을 포함하는 path에 설정된 쿠키만 접근가능
+            setLoginStatus(document.cookie.indexOf("AIServer-AID", 0) != -1);
+        });
+
+        function onResize() {
+            // 5(leftMargin) + 250(leftContainer) + 5(offset) + 5(rightMargin)
+            mainContainer.css("width", $(window).width()-265);
+
+            // 81(top) +  60(bottom) - 5 (offset보정)
+            leftContainer.css("height", $(window).height()-136);
+            mainContainer.css("height", $(window).height()-136);
+        }
+
+        $(window).resize(function () {
+            onResize();
+        });
+
+        function loadMainFrameDocument(url) {
+            // 문서의 로딩완료순서때문에 left에서 mainFrame의 객체들을 일관되게 접근불가
+            // 즉 left의 callback이 실행되는순간에도 mainFrame의 문서가 완료되지 않음
+            // -> 서버통신과 task처리 callback을 각각의 mainFrame문서에 위임함
+            // .location.assign("./dataSource_list.html"); // FF불가
+            mainWin.contentWindow.location = url;
+        }
+
+        function clearMainFrame() {
+            mainWin.contentWindow.document.body.innerHTML = "";
+        }
+
+        function showMessage(message, isText, warning) {
+            if (!message) return; // contains empty
+            if (warning === true) {
+                alertMsg.css("color", "#FF0000");
+            } else {
+                alertMsg.css("color", "#000000");
+            }
+
+            if (isText === true) { // \n형식의 개행작동않음 -> <br> + html 사용요
+                //alertMsg.html(""); // 불필요 (text도 전체 content set됨)
+                alertMsg.text(message); // escapes value (태그도 사용가능)
+            } else { // html
+                alertMsg.html(message);
+            }
+            alertDialog.modal("show");
+        }
+
+        function setLoadingDialogVisible(visible) {
+            if (visible === true) {
+                loadingDialog.modal('show');
+            } else {
+                loadingDialog.modal('hide');
+            }
+        }
+
+        var replExp = /'/g; // input value='v'에 적용하기 위해 '를 replace
+        function escapeValue(value) {
+            if (typeof value != "string") return value;
+
+            if (value.indexOf("'") == -1) {
+                return value;
+            } else {
+                return (value.replace(replExp, "&#039;"));
+            }
+        }
+
+        var spaceExp = /\+/g; // "+" -> " " (헤더값등의 디코딩)
+        function decodeSpace(value) {
+            return (value.replace(spaceExp, " "));
+        }
+
+        function setLoginStatus(serverLogined) {
+            if (userLogined === serverLogined) return;
+
+            userLogined = serverLogined;
+            var listLoginOut = $("#loginOut");
+            if (userLogined) {
+                listLoginOut.text("로그아웃");
+            } else {
+                listLoginOut.text("로그인");
+            }
+        }
+        function handleLogin() {
+            if (userLogined) {
+                doLogout();
+            } else {
+                // focus는 아래의 show이벤트에서 초기화되므로 핸들러에 통합기술함
+                loginDialog.modal('show');
+            }
+        }
+        function doLogin() {
+            var paramObj = {};
+            var validated = false;
+            var v = $.trim(document.getElementById("adminID").value);
+            if (v) {
+                paramObj.id = v;
+                v = $.trim(document.getElementById("adminPasswd").value);
+                if (v) {
+                    paramObj.passwd = v;
+                    paramObj.type = "admin";
+                    validated = true;
+                }
+            }
+            if (!validated) {
+                loginDialog.modal('hide');
+                parent.showMessage("유효한 ID와 패스워드를 입력하세요.", true, false);
+                return;
+            }
+
+            loginDialog.modal('hide');
+            simpleRequest.setTask("server", "auth", "login");
+            simpleRequest.doRequest("POST", paramObj, logined, 30000, "text");
+        }
+        function logined(content, jqXHR) {
+            // 쿠키 중복가능성을 없애기 위해 무조건 삭제후 재설정
+            clearSessionStatus();
+            // 쿠키용법은 activeintra-comm.js의 setTaskCookie()참조
+            document.cookie = "AIServer-AID=" +
+                    jqXHR.getResponseHeader("AIServer-AID") + "; Path=" + activeintra.comm.contextPath;
+            setLoginStatus(true);
+
+            showMessage("로그인되었습니다.", true, false);
+        }
+        function doLogout() {
+            simpleRequest.setTask("server", "auth", "logout");
+            simpleRequest.doRequest("GET", {type:"admin"}, logouted, 30000, "text");
+        }
+        function logouted() {
+            clearSessionStatus();
+            setLoginStatus(false);
+            clearMainFrame();
+
+            showMessage("로그아웃되었습니다.", true, false);
+        }
+        function clearSessionStatus() {
+            document.cookie = "AIServer-AID=a; Expires=Thu, 01-Jan-1970 00:00:00 GMT; Path=" + activeintra.comm.contextPath;
+        }
+
+        // time(milliseconds since the epoch) -> local time(string)
+        function composeDateStr(timeMillis) {
+            var theTime = new Date(parseInt(timeMillis));
+            var hh = "" + theTime.getHours();
+            if (hh.length == 1) hh = "0" + hh;
+            var mm = "" + theTime.getMinutes();
+            if (mm.length == 1) mm = "0" + mm;
+            var ss = "" + theTime.getSeconds();
+            if (ss.length == 1) ss = "0" + ss;
+
+            var month = "" + (theTime.getMonth()+1);
+            if (month.length == 1) month = "0" + month;
+            var date = "" + theTime.getDate();
+            if (date.length == 1) date = "0" + date;
+
+            return (theTime.getFullYear() + "-" + month + "-" +
+                    date + ", " + hh + ":" + mm + ":" + ss
+            );
+        }
+    </script>
+</head>
+
+<body style="font-family:'맑은 고딕',Arial,sans-serif; font-size:14px;">
+<!-- Fixed navbar -->
+<nav class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+        <div id="navbar" class="collapse navbar-collapse" style="min-height:60px;">
+            <ul class="nav navbar-nav" style="margin-top:7px; font-size:20px; font-weight:600;">
+                <li><a href="config_menu.html" target="leftFrame">서버설정</a></li>
+                <li><a href="report_menu.html" target="leftFrame">보고서 관리</a></li>
+                <li><a href="dataSource_menu.html" target="leftFrame">데이타소스 관리</a></li>
+                <li><a id="loginOut" href="#" onclick="handleLogin();return false;" style="color:blue;">로그인</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Begin page content -->
+<div class="container">
+    <div id="leftContainer" style="position:fixed; top:68px; left:5px; width:240px;">
+      <iframe name="leftFrame" width="100%" height="100%"></iframe>
+    </div>
+    <div id="mainContainer" style="position:fixed; top:68px; left:250px;">
+      <iframe name="mainFrame" width="100%" height="100%"></iframe>
+    </div>
+</div>
+
+<footer class="footer">
+    <div class="container">
+        <p class="text-muted">ⓒ <b>(주)액티브인트라</b>&nbsp;&nbsp;&nbsp;&nbsp;서울시 송파구 백제고분로7길 8-8 명소빌딩4층 (잠실동)
+        &nbsp;&nbsp;&nbsp; 기술지원: <a href="http://www.ai-report.com/" target="_blank">www.ai-report.com</a> (Tel: 02-555-1670)</p>
+    </div>
+</footer>
+
+<div id="alertDialog" class="modal" data-backdrop="false" tabindex="-1">
+  <div class="modal-dialog" style="position:fixed; top:50%; left:50%; margin-top:-80px; margin-left:-230px; width:500px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" title="Close"><span class="glyphicon glyphicon-remove"></span></button>
+        <h4 class="modal-title">Admin console - 메세지</h4>
+      </div>
+      <div class="modal-body">
+        <p id="alertMsg" style="font-size:14px; font-weight:bold;"></p>
+      </div>
+      <div class="modal-footer">
+        <button id="alertClose" type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loginDialog" class="modal" data-backdrop="false" tabindex="-1">
+  <div class="modal-dialog" style="position:fixed; top:50%; left:50%; margin-top:-80px; margin-left:-230px; width:400px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" title="Close"><span class="glyphicon glyphicon-remove"></span></button>
+        <h4 class="modal-title">AIReport - 관리콘솔 로그인</h4>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="doLogin();return false;" class="form-horizontal">
+          <div class="form-group">
+            <label for="adminID" class="col-xs-3 control-label">ID</label>
+            <div class="col-xs-9">
+              <input type="text" class="form-control" id="adminID" placeholder="관리자(개발자) ID"
+                     onkeyup="if(event.keyCode==13)doLogin();">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label for="adminPasswd" class="col-xs-3 control-label">패스워드</label>
+            <div class="col-xs-9">
+              <input type="password" class="form-control" id="adminPasswd" placeholder="password"
+                     onkeyup="if(event.keyCode==13)doLogin();">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button onclick="doLogin()" type="button" class="btn btn-primary">OK</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loadingDialog" class="modal fade" data-backdrop="static" data-keyboard="false" tabindex="-1">
+  <div class="modal-dialog" style="position:fixed; top:50%; left:50%; margin-top:-60px; margin-left:-80px; width:170px;">
+    <div class="modal-content">
+      <div class="modal-body" style="text-align:center;">
+        <img src="images/loading.gif" alt="Loading data">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+<script src="bootstrap/js/bootstrap.min.js"></script>
+<!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
+<script src="bootstrap/js/ie10-viewport-bug-workaround.js"></script>
+</body>
+</html>

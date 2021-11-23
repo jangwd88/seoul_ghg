@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="standInfoMapper">
+
+
+	<select id="selectYearList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_MIN_MAX_YYYY AS (
+		SELECT
+			MIN(A.YEAR) AS MIN_YYYY,
+			MAX(A.YEAR) AS MAX_YYYY
+		FROM
+			INV_ENG_CEF A)
+		SELECT
+			MAX_YYYY-LEVEL + 1 AS YYYY
+		FROM
+			TEMP_MIN_MAX_YYYY
+		CONNECT BY
+			LEVEL &lt;= ((MAX_YYYY + 1)-MIN_YYYY)
+		ORDER BY
+			YYYY
+	</select>
+
+	<select id="getDataInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT S_CD AS CODE, S_DESC AS NAME FROM T_CODE WHERE S_CAT = 'INV_DATA_INFO'
+	</select>
+
+	<select id="selectGubunList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			   S_CD AS CODE,
+			   S_DESC || DECODE(S_VAL,
+			   NULL,
+			   '',
+			   ' > ' || S_VAL) AS VALUE
+			FROM
+			   T_CODE
+			WHERE
+			   S_CAT = 'EMT'
+			   AND C_DEL_YN = 'N'
+			ORDER BY
+			   N_ORDER
+	</select>
+
+	<select id="standInfo003_search" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_INV_ENG_POINT AS (
+			SELECT
+			   A.*
+			FROM
+			   INV_ENG_POINT A
+			WHERE
+			   1 = 1
+			   AND A.C_DEL_YN = 'N'
+			   AND A.INV_ENG_POINT_DIV = '2'
+			   AND A.INV_ENG_POINT_CD NOT IN ('1', '3', '5', '20', '22', '31'))
+			SELECT
+			   A.INV_ENG_POINT_ID,
+			   A.INV_ENG_POINT_ID AS uqid,
+			   A.INV_ENG_POINT_DIV,
+			   A.INV_ENG_POINT_CD AS id,
+			   CASE WHEN A.UP_INV_ENG_POINT_CD = 0 THEN '#' ELSE A.UP_INV_ENG_POINT_CD END parent,
+			   A.INV_ENG_POINT_NM AS text,
+			   A.N_ORDER,
+			   CONNECT_BY_ROOT INV_ENG_POINT_CD AS ROOT_NAME
+			FROM
+			   TEMP_INV_ENG_POINT A
+			WHERE
+			   1 = 1
+			START WITH
+			   A.UP_INV_ENG_POINT_CD = '0'
+			CONNECT BY
+			   PRIOR A.INV_ENG_POINT_CD = A.UP_INV_ENG_POINT_CD ORDER SIBLINGS BY A.N_ORDER
+	</select>
+
+	<select id="standInfo003_searchDetail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			A.INV_ENG_POINT_ID,
+			A.INV_ENG_POINT_DIV,
+			A.INV_ENG_POINT_CD,
+			A.UP_INV_ENG_POINT_CD,
+			A.INV_ENG_POINT_NM,
+			A.CODE,
+			A.N_ORDER,
+			A.DATA_INFO,
+			A.FAC_START_DAY,
+			A.FAC_END_DAY,
+			B.S_DESC AS OWNER_GUBUN
+		FROM
+			INV_ENG_POINT A,
+			(
+			SELECT
+				*
+			FROM
+				T_CODE
+			WHERE
+				S_CAT = 'PROP_OFFICER') B
+		WHERE
+			A.OWNER_GUBUN = B.S_CD
+			AND A.INV_ENG_POINT_DIV = '2' /*FIXED*/
+		    AND A.INV_ENG_POINT_CD = #{INV_ENG_POINT_CD} /*PARAM*/
+	</select>
+	
+	<select id="standInfo003_searchDetailTalbe" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		
+		SELECT  
+		   A.INV_ENG_POINT_DETAIL_ID,
+		   A.INV_ENG_POINT_DIV,
+		   A.INV_ENG_POINT_CD,
+		   A.CODE,
+		   A.CEF_WORK_DIV,
+		   A.CEF_WORK_NM 
+		FROM INV_ENG_POINT_DETAIL A
+		WHERE  INV_ENG_POINT_DIV = '2'
+		AND INV_ENG_POINT_CD = #{INV_ENG_POINT_CD}
+		ORDER BY INV_ENG_POINT_DETAIL_ID
+	</select>
+
+	<delete id="standInfo003_deleteRow" parameterType="java.util.HashMap">
+		DELETE FROM INV_ENG_POINT_DETAIL
+		WHERE INV_ENG_POINT_DIV = '2'
+		AND INV_ENG_POINT_CD = #{INV_ENG_POINT_CD}
+		AND INV_ENG_POINT_DETAIL_ID = #{INV_ENG_POINT_DETAIL_ID}
+	</delete>
+	
+	<update id="standInfo003_updateRow" parameterType="java.util.HashMap">
+		UPDATE INV_ENG_POINT_DETAIL
+			SET CEF_WORK_NM = #{INV_ENG_POINT_NM},
+				CODE = #{CODE},
+				S_MOD_ID = 'SYSTEM',
+				D_MOD_DATE = SYSDATE
+		WHERE INV_ENG_POINT_DETAIL_ID = #{INV_ENG_POINT_DETAIL_ID}
+		AND INV_ENG_POINT_DIV = 2
+		AND INV_ENG_POINT_CD = #{INV_ENG_POINT_CD}
+	</update>
+	
+	<insert id="standInfo003_addRow" parameterType="java.util.HashMap">
+		INSERT INTO INV_ENG_POINT_DETAIL
+			(INV_ENG_POINT_DETAIL_ID, 
+			INV_ENG_POINT_DIV, 
+			INV_ENG_POINT_CD,
+			CEF_WORK_DIV,
+			CEF_WORK_NM,
+			CODE,
+			S_REG_ID,
+			D_REG_DATE
+			)
+		VALUES
+		 	((SELECT MAX(INV_ENG_POINT_DETAIL_ID) +1 FROM INV_ENG_POINT_DETAIL ),
+		 	 2, 
+			#{INV_ENG_POINT_CD},
+			CASE WHEN #{ROOT_ID} = 2 THEN '3'
+				 WHEN #{ROOT_ID} = 19 THEN '4'
+			END ,
+			#{INV_ENG_POINT_NM},
+			#{CODE}, 
+			'SYSTEM',
+			SYSDATE
+			)
+	</insert>
+
+
+	<select id="standInfo004_search" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		WITH TEMP_FUEL_DIV AS (
+				SELECT S_CD, S_DESC
+				  FROM 
+				   T_CODE
+				WHERE
+				   S_CAT = 'FUEL_DIV'
+				   AND C_DEL_YN = 'N'
+				   ORDER BY N_ORDER)
+				SELECT
+				   NVL(A.CEF_GUBUN, #{CEF_GUBUN} /*PARAM(구분 : 1    고정연소, 2 이동연소, 3   이동연소 > 비포장, 4 GWP, 5   프로판 및 부탄 환산)*/) AS CEF_GUBUN,
+				   B.S_DESC AS CEF_GUBUN_NM,
+				   NVL(A.YEAR, #{year} /*PARAM(기준연도)*/) AS YEAR,
+				   NVL(Z.S_CD, ' ') AS FUEL_DIV,
+				   NVL(Z.S_DESC, ' ') AS FUEL_DIV_NM,
+				   DECODE(#{CEF_GUBUN}, '4', A.GWP_GHG, A.UNIT) AS UNIT,
+    				DECODE(#{CEF_GUBUN}, '4', NVL(D.S_DESC, ' '), NVL(C.S_DESC, ' ')) AS UNIT_NM,
+				   NVL(A.N_TOT_HEAT, 0) AS N_TOT_HEAT,
+				   NVL(A.N_HEAT, 0) AS N_HEAT,
+				   NVL(A.GHG_UNIT, 0) AS GHG_UNIT,
+				   NVL(A.TJ, 0) AS TJ,
+				   NVL(A.FUEL_DIV_IPCC, 0) AS FUEL_DIV_IPCC,
+				   NVL(A.ENG_CO2, 0) AS ENG_CO2,
+				   NVL(A.ENG_CH4, 0) AS ENG_CH4,
+				   NVL(A.ENG_N2O, 0) AS ENG_N2O,
+				   NVL(A.MANU_CO2, 0) AS MANU_CO2,
+				   NVL(A.MANU_CH4, 0) AS MANU_CH4,
+				   NVL(A.MANU_N2O, 0) AS MANU_N2O,
+				   NVL(A.COMM_CO2, 0) AS COMM_CO2,
+				   NVL(A.COMM_CH4, 0) AS COMM_CH4,
+				   NVL(A.COMM_N2O, 0) AS COMM_N2O,
+				   NVL(A.HOME_CO2, 0) AS HOME_CO2,
+				   NVL(A.HOME_CH4, 0) AS HOME_CH4,
+				   NVL(A.HOME_N2O, 0) AS HOME_N2O,
+				   NVL(A.CO2, 0) AS CO2,
+				   NVL(A.CH4, 0) AS CH4,
+				   NVL(A.N2O, 0) AS N2O,
+				   NVL(A.GWP_GHG, 0) AS GWP_GHG,
+				   NVL(A.GWP_VALUE, 0) AS GWP_VALUE
+				FROM
+				   TEMP_FUEL_DIV Z, INV_ENG_CEF A,
+				   (
+				   SELECT
+				      *
+				   FROM
+				      T_CODE
+				   WHERE
+				      S_CAT = 'EMT') B,
+				   (
+				   SELECT
+				      *
+				   FROM
+				      T_CODE
+				   WHERE
+				      S_CAT = 'UNIT') C,
+				   (
+				   SELECT
+				      *
+				   FROM
+				      T_CODE
+				   WHERE
+				      S_CAT = 'UNIT') D
+				WHERE
+				   Z.S_CD(+) = DECODE(#{CEF_GUBUN}, '4', NULL, A.FUEL_DIV)
+				   AND NVL(A.CEF_GUBUN, #{CEF_GUBUN} /*PARAM(구분 : 1    고정연소, 2 이동연소, 3   이동연소 > 비포장, 4 GWP, 5   프로판 및 부탄 환산)*/) = B.S_CD(+)
+				   AND A.UNIT = C.S_CD(+)
+				   AND A.GWP_GHG = D.S_CD(+)
+				   AND A.CEF_GUBUN(+) = #{CEF_GUBUN} /*PARAM(구분 : 1    고정연소, 2 이동연소, 3   이동연소 > 비포장, 4 GWP, 5   프로판 및 부탄 환산)*/
+				   AND A.YEAR(+) = #{year} /*PARAM(기준연도)*/
+	</select>
+	
+	<select id="standInfo004_getPreYearData" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT CEF_GUBUN,
+		 	 		YEAR,
+		 	  		FUEL_DIV,
+			 	    UNIT, 
+			 	    NVL(N_TOT_HEAT,0) AS N_TOT_HEAT,
+			 	    NVL(N_HEAT,0) AS N_HEAT,
+			 	    GHG_UNIT,
+		 	    	NVL(TJ,0) AS TJ, 
+		 	        FUEL_DIV_IPCC, 
+	 	      		NVL(ENG_CO2,0) AS ENG_CO2,
+ 	       		    NVL(ENG_CH4,0) AS ENG_CH4,
+	       		    NVL(ENG_N2O,0) AS ENG_N2O,
+        		    NVL(MANU_CO2,0) AS MANU_CO2,
+        		    NVL(MANU_CH4,0) AS MANU_CH4,
+        		    NVL(MANU_N2O,0) AS MANU_N2O,
+        		 	NVL(COMM_CO2,0) AS COMM_CO2,
+       		  		NVL(COMM_CH4,0) AS COMM_CH4,
+       		  		NVL(COMM_N2O,0) AS COMM_N2O,
+       		  		NVL(HOME_CO2,0) AS HOME_CO2,
+       		  		NVL(HOME_CH4,0) AS HOME_CH4,
+       		  		NVL(HOME_N2O,0) AS HOME_N2O,  
+      		   		NVL(CO2,0) AS CO2,
+       		   		NVL(CH4,0) AS CH4, 
+      		   		NVL(N2O,0) AS N2O,
+					NVL(GWP_GHG,0) AS GWP_GHG,
+			 		NVL(GWP_VALUE,0)  AS GWP_VALUE
+		 FROM INV_ENG_CEF WHERE YEAR = ${year} - 1
+	 </select>
+	 
+	 <insert id="setpreYearData" parameterType="java.util.HashMap">
+	 	MERGE INTO INV_ENG_CEF A
+			USING DUAL  ON (A.CEF_GUBUN = #{CEF_GUBUN} AND A.YEAR = ${YEAR} +1 )
+		 WHEN MATCHED THEN
+		 	UPDATE SET 
+		 			FUEL_DIV = #{FUEL_DIV,jdbcType=VARCHAR},
+			 	    UNIT = #{UNIT,jdbcType=VARCHAR}, 
+			 	    N_TOT_HEAT = #{N_TOT_HEAT},
+			 	    N_HEAT = #{N_HEAT},
+			 	    GHG_UNIT = #{GHG_UNIT,jdbcType=VARCHAR},
+		 	    	TJ = #{TJ}, 
+		 	        FUEL_DIV_IPCC = #{FUEL_DIV_IPCC,jdbcType=VARCHAR}, 
+	 	      		ENG_CO2 = NVL(#{ENG_CO2},0),
+ 	       		    ENG_CH4 = NVL(#{ENG_CH4},0),
+	       		    ENG_N2O = NVL(#{ENG_N2O},0),
+        		    MANU_CO2 = NVL(#{MANU_CO2},0),
+        		    MANU_CH4 = NVL(#{MANU_CH4},0),
+        		    MANU_N2O = NVL(#{MANU_N2O},0),
+        		 	COMM_CO2 = NVL(#{COMM_CO2},0),
+       		  		COMM_CH4 = NVL(#{COMM_CH4},0),
+       		  		COMM_N2O = NVL(#{COMM_N2O},0),
+       		  		HOME_CO2 = NVL(#{HOME_CO2},0),
+       		  		HOME_CH4 = NVL(#{HOME_CH4},0),
+       		  		HOME_N2O = NVL(#{HOME_N2O},0),
+      		   		CO2 = NVL(#{CO2},0),
+       		   		CH4 = NVL(#{CH4},0),
+      		   		N2O = NVL(#{N2O},0),
+					GWP_GHG = NVL(#{GWP_GHG},0),
+			 		GWP_VALUE = NVL(#{GWP_VALUE},0), 
+			 		S_MOD_ID = 'SYSTEM', 
+			 		D_MOD_DATE = SYSDATE 
+		 WHEN NOT MATCHED THEN
+		 	INSERT (CEF_GUBUN,
+		 	 		YEAR,
+		 	  		FUEL_DIV,
+			 	    UNIT, 
+			 	    N_TOT_HEAT,
+			 	    N_HEAT,
+			 	    GHG_UNIT,
+		 	    	TJ, 
+		 	        FUEL_DIV_IPCC, 
+	 	      		ENG_CO2,
+ 	       		    ENG_CH4,
+	       		    ENG_N2O,
+        		    MANU_CO2,
+        		    MANU_CH4,
+        		    MANU_N2O,
+        		 	COMM_CO2,
+       		  		COMM_CH4,
+       		  		COMM_N2O,
+       		  		HOME_CO2,
+       		  		HOME_CH4,
+       		  		HOME_N2O, 
+      		   		CO2,
+       		   		CH4, 
+      		   		N2O,
+					GWP_GHG,
+			 		GWP_VALUE, 
+			 		S_REG_ID, 
+			 		D_REG_DATE 
+			)
+		 	VALUES (
+		 			#{CEF_GUBUN},
+		 	 		 ${YEAR} +1 ,
+		 	  		#{FUEL_DIV,jdbcType=VARCHAR},
+			 	    #{UNIT,jdbcType=VARCHAR}, 
+			 	    #{N_TOT_HEAT},
+			 	    #{N_HEAT},
+			 	    #{GHG_UNIT,jdbcType=VARCHAR},
+		 	    	#{TJ}, 
+		 	        #{FUEL_DIV_IPCC,jdbcType=VARCHAR}, 
+	 	      		NVL(#{ENG_CO2},0),
+ 	       		    NVL(#{ENG_CH4},0),
+	       		    NVL(#{ENG_N2O},0),
+        		    NVL(#{MANU_CO2},0),
+        		    NVL(#{MANU_CH4},0),
+        		    NVL(#{MANU_N2O},0),
+        		 	NVL(#{COMM_CO2},0),
+       		  		NVL(#{COMM_CH4},0),
+       		  		NVL(#{COMM_N2O},0),
+       		  		NVL(#{HOME_CO2},0),
+       		  		NVL(#{HOME_CH4},0),
+       		  		NVL(#{HOME_N2O},0), 
+      		   		NVL(#{CO2},0),
+       		   		NVL(#{CH4},0), 
+      		   		NVL(#{N2O},0),
+					NVL(#{GWP_GHG},0),
+			 		NVL(#{GWP_VALUE},0), 
+			 		'SYSTEM', 
+			 		SYSDATE
+			 		)
+	 
+	 </insert>
+	 
+	<update id="standInfo004_save" parameterType="java.util.HashMap">
+		UPDATE INV_ENG_CEF
+			SET ${COLUMN} = #{VALUE},
+			    S_MOD_ID = 'SYSTEM',
+			    D_MOD_DATE = SYSDATE 
+		WHERE YEAR = #{YEAR}
+		AND CEF_GUBUN = #{CEF_GUBUN}
+		AND ${GUBUN} = #{FUEL_DIV}
+	</update>
+	
+	<select id="standInfo004_checkYearData" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT *
+		  FROM INV_ENG_CEF
+		 WHERE YEAR = TO_NUMBER(#{year}) + 1
+	</select>
+	
+	<insert id="standInfo004_insertYearData" parameterType="java.util.HashMap">
+		INSERT INTO INV_ENG_CEF
+		SELECT CEF_GUBUN,
+			TO_NUMBER(#{year}) + 1 AS YEAR,
+			FUEL_DIV,
+			UNIT,
+			N_TOT_HEAT,
+			N_HEAT,
+			GHG_UNIT,
+			TJ,
+			FUEL_DIV_IPCC,
+			ENG_CO2,
+			ENG_CH4,
+			ENG_N2O,
+			MANU_CO2,
+			MANU_CH4,
+			MANU_N2O,
+			COMM_CO2,
+			COMM_CH4,
+			COMM_N2O,
+			HOME_CO2,
+			HOME_CH4,
+			HOME_N2O,
+			CO2,
+			CH4,
+			N2O,
+			GWP_GHG,
+			GWP_VALUE,
+			'SYSTEM',
+			SYSDATE,
+			NULL,
+			NULL
+		  FROM INV_ENG_CEF
+		  WHERE YEAR = #{year}
+	</insert>
+
+</mapper>

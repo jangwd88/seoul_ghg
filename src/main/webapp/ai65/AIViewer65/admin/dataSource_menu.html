@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <!--<script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>-->
+  <script type="text/javascript">
+      $(function () {
+          //parent.clearMainFrame();
+          parent.loadMainFrameDocument("dataSource_list.html");
+      });
+  </script>
+</head>
+<body style="font-family:'맑은 고딕',Arial,sans-serif;">
+
+<div style="margin:5px;">
+  <div class="btn-group btn-group-lg btn-block">
+    <button type="button" class="btn btn-info btn-block"
+            onclick="parent.loadMainFrameDocument('dataSource_list.html')">데이타소스 목록</button>
+    <button type="button" class="btn btn-info btn-block"
+            onclick="parent.loadMainFrameDocument('dataSource_import.html')">데이타소스 Import</button>
+  </div>
+</div>
+
+</body>
+</html>

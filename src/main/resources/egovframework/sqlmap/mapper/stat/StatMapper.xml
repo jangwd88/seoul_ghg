@@ -1,0 +1,616 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="statMapper">
+
+	<select id="getCode" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+		   S_CD AS CODE,
+		   S_DESC AS VALUE,
+		   S_VAL AS EXT_VALUE
+		FROM
+		   T_CODE
+		WHERE 1 = 1
+			<choose>
+				<when test="TYPE != null and TYPE != ''">
+				   AND S_CAT LIKE #{S_CAT} || '%'
+				</when>
+				<otherwise>
+				   AND S_CAT = #{S_CAT}
+				</otherwise>
+			</choose>
+		   AND C_DEL_YN = 'N'
+		ORDER BY N_ORDER, ID_CODE
+	</select>
+	
+	<select id="selectMinMaxYear" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+<!-- 		SELECT -->
+<!-- 			MIN(A.YEAR) AS MIN_YYYY, -->
+<!-- 			MAX(A.YEAR) AS MAX_YYYY -->
+<!-- 		FROM -->
+<!-- 			BLD_PURPS_01_MONTH A -->
+		<!--너무느려서 수정함 -->
+		SELECT '2014' AS MIN_YYYY, '2020' AS MAX_YYYY FROM DUAL
+	</select>
+	<select id="selectYearList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		<choose>
+			<when test='acu == "1"'>
+				<choose>
+					<when test="start_year != null and start_year != '' and end_year != null and end_year != ''">
+						SELECT
+							#{end_year} - LEVEL + 1 AS YYYY
+						FROM
+							DUAL
+						CONNECT BY
+							LEVEL &lt;= (#{end_year} + 1 - #{start_year})
+						ORDER BY
+							YYYY
+					</when>
+					<otherwise>
+						WITH TEMP_MIN_MAX_YYYY AS (
+						SELECT
+							MIN(A.YEAR) AS MIN_YYYY,
+							MAX(A.YEAR) AS MAX_YYYY
+						FROM
+							BLD_PURPS_01_MONTH A)
+						SELECT
+							MAX_YYYY-LEVEL + 1 AS YYYY
+						FROM
+							TEMP_MIN_MAX_YYYY
+						CONNECT BY
+							LEVEL &lt;= ((MAX_YYYY + 1)-MIN_YYYY)
+						ORDER BY
+							YYYY
+					</otherwise>
+				</choose>
+			</when>			
+			<when test='acu == "2"'>
+				<choose>
+					<when test="start_year != null and start_year != '' and end_year != null and end_year != ''">
+						SELECT
+							12 - LEVEL + 1 AS YYYY
+						FROM
+							DUAL
+						CONNECT BY
+							LEVEL &lt;= (12 + 1 - 1)
+						ORDER BY
+							YYYY
+					</when>
+					<otherwise>
+						WITH TEMP_MIN_MAX_YYYY AS (
+						SELECT
+							MIN(A.YEAR||A.MONTH) AS MIN_YYYY,
+							MAX(A.YEAR||A.MONTH) AS MAX_YYYY
+						FROM
+							BLD_PURPS_01_MONTH A
+						WHERE A.YEAR||A.MONTH BETWEEN #{start_year}||<choose><when test="start_month != null and start_month != ''">#{start_month}</when><otherwise>'01'</otherwise></choose> AND #{end_year}||<choose><when test="start_month != null and start_month != ''">#{end_month})</when><otherwise>'12'</otherwise></choose>
+						SELECT
+							MAX_YYYY-LEVEL + 1 AS YYYY
+						FROM
+							TEMP_MIN_MAX_YYYY
+						CONNECT BY
+							LEVEL &lt;= ((MAX_YYYY + 1)-MIN_YYYY)
+						ORDER BY
+							YYYY
+					</otherwise>
+				</choose>
+			</when>
+			<otherwise>
+				SELECT TO_CHAR(SYSDATE, 'YYYYMMDD') AS YYYY
+				  FROM DUAL
+			</otherwise>
+		</choose>
+		
+	</select>
+
+	<select id="stat001_search" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		<choose>
+			<!-- <when test='(start_totarea == null or start_totarea == "") and (start_permission == null or start_permission == "")'> -->
+			<when test='utilList.size == 1'>
+				WITH TEMP_BLD_PURPS AS (
+				SELECT
+					A.MAIN_PURPS_CD,
+					B.S_DESC AS MAIN_PURPS_NM,
+					A.ENERGY_TYPE,
+					<choose>
+						<when test='acu == "1"'>
+							A.YEAR,
+						</when>
+						<when test='acu == "2"'>
+							A.YEAR,
+							A.MONTH,
+						</when>
+					</choose>
+					A.ENERGY_USE,
+					A.TOE,
+					A.TCO2 AS TCO2EQ
+				FROM
+					<choose>
+						<when test='acu == "1"'>
+							BLD_PURPS_${utilList[0]}_YEAR A,
+						</when>
+						<when test='acu == "2"'>
+							BLD_PURPS_${utilList[0]}_MONTH A,
+						</when>
+					</choose>
+					(
+					SELECT
+						*
+					FROM
+						T_CODE
+					WHERE
+						S_CAT = 'PURPS') B
+				WHERE
+					A.MAIN_PURPS_CD = B.S_CD
+					<if test="acu != null and acu != ''">
+						<choose>
+							<when test='acu == "1"'>
+								<if test="start_year != null and start_year != '' and end_year != null and end_year != ''">
+								  	AND A.YEAR BETWEEN #{start_year} AND #{end_year} /*조회기간(년)*/
+								</if>			
+							</when>
+							<when test='acu == "2"'>
+								<if test="start_year != null and start_year != ''">
+								  	AND A.YEAR = #{start_year} /*조회기간(년)*/
+								  	AND A.MONTH BETWEEN #{start_month} AND #{end_month} /*조회기간(월)*/
+								</if>			
+							</when>
+						</choose>
+					</if>
+					AND A.ENERGY_TYPE IN <foreach collection="energyList" item="item" open="(" close=")" separator=",">#{item}</foreach>  /*에너지원*/
+					<!-- <if test="util != null and util != ''">
+									  		AND A.MAIN_PURPS_CD IN <foreach collection="utilList" item="item" open="(" close=")" separator=",">#{item}</foreach>  /*용도*/
+					</if> -->
+					<if test="start_totarea != null and start_totarea != ''">
+						AND A.TOTAREA_SUM BETWEEN #{start_totarea} AND #{end_totarea}
+					</if>
+					<if test="start_permission != null and start_permission != ''">
+						AND TRUNC((SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) / 365.254) BETWEEN #{start_permission} AND #{end_permission}
+					</if>)
+				SELECT
+					A.MAIN_PURPS_NM,
+					<foreach collection="yearList" item="item">
+						<if test="energy0 != null and energy0 != ''">
+							SUM(DECODE(A.ENERGY_TYPE, '전기', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.ENERGY_USE, 0), 0), 0)) AS E_TOE_${item.YYYY},
+							SUM(DECODE(A.ENERGY_TYPE, '전기', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.TCO2EQ, 0), 0), 0)) AS E_TCO2EQ_${item.YYYY},
+						</if>
+						<if test="energy1 != null and energy1 != ''">
+							SUM(DECODE(A.ENERGY_TYPE, '가스', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.ENERGY_USE, 0), 0), 0)) AS G_TOE_${item.YYYY},
+							SUM(DECODE(A.ENERGY_TYPE, '가스', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.TCO2EQ, 0), 0), 0)) AS G_TCO2EQ_${item.YYYY},
+						</if>
+						<if test="energy2 != null and energy2 != ''">
+							SUM(DECODE(A.ENERGY_TYPE, '지역난방', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.ENERGY_USE, 0), 0), 0)) AS H_TOE_${item.YYYY},
+							SUM(DECODE(A.ENERGY_TYPE, '지역난방', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.TCO2EQ, 0), 0), 0)) AS H_TCO2EQ_${item.YYYY},
+						</if>
+					</foreach>
+					SUM(NVL(A.ENERGY_USE, 0)) AS TOT_ENERGY_USE
+				FROM
+					TEMP_BLD_PURPS A
+				GROUP BY
+					A.MAIN_PURPS_NM
+				ORDER BY TOT_ENERGY_USE DESC
+			</when>
+			<otherwise>
+				<choose>
+					<when test='utilList.size > 1'>
+						WITH TEMP_BLD_PURPS AS (
+						SELECT
+							A.MAIN_PURPS_CD,
+							B.S_DESC AS MAIN_PURPS_NM,
+							A.ENERGY_TYPE,
+							<choose>
+								<when test='acu == "1"'>
+									A.YEAR,
+								</when>
+								<when test='acu == "2"'>
+									A.YEAR,
+									A.MONTH,
+								</when>
+							</choose>
+							A.ENERGY_USE,
+							A.TOE,
+							A.TCO2EQ
+						FROM
+							<choose>
+								<when test='acu == "1"'>
+									BLD_PURPS_YEAR A,
+								</when>
+								<when test='acu == "2"'>
+									BLD_PURPS_MONTH A,
+								</when>
+							</choose>
+							(
+							SELECT
+								*
+							FROM
+								T_CODE
+							WHERE
+								S_CAT = 'PURPS') B
+						WHERE
+							A.MAIN_PURPS_CD = B.S_CD
+							<if test="acu != null and acu != ''">
+								<choose>
+									<when test='acu == "1"'>
+										<if test="start_year != null and start_year != '' and end_year != null and end_year != ''">
+										  	AND A.YEAR BETWEEN #{start_year} AND #{end_year} /*조회기간(년)*/
+										</if>			
+									</when>
+									<when test='acu == "2"'>
+										<if test="start_year != null and start_year != ''">
+										  	AND A.YEAR = #{start_year} /*조회기간(년)*/
+										  	AND A.MONTH BETWEEN #{start_month} AND #{end_month} /*조회기간(월)*/
+										</if>			
+									</when>
+								</choose>
+							</if>
+							AND A.ENERGY_TYPE IN <foreach collection="energyList" item="item" open="(" close=")" separator=",">#{item}</foreach>  /*에너지원*/
+							<if test="util != null and util != ''">
+						  		AND A.MAIN_PURPS_CD IN <foreach collection="utilList" item="item" open="(" close=")" separator=",">#{item}</foreach>  /*용도*/
+							</if>)
+						SELECT
+							A.MAIN_PURPS_NM,
+							<foreach collection="yearList" item="item">
+								<if test="energy0 != null and energy0 != ''">
+									SUM(DECODE(A.ENERGY_TYPE, '전기', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.ENERGY_USE, 0), 0), 0)) AS E_TOE_${item.YYYY},
+									SUM(DECODE(A.ENERGY_TYPE, '전기', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.TCO2EQ, 0), 0), 0)) AS E_TCO2EQ_${item.YYYY},
+								</if>
+								<if test="energy1 != null and energy1 != ''">
+									SUM(DECODE(A.ENERGY_TYPE, '가스', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.ENERGY_USE, 0), 0), 0)) AS G_TOE_${item.YYYY},
+									SUM(DECODE(A.ENERGY_TYPE, '가스', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.TCO2EQ, 0), 0), 0)) AS G_TCO2EQ_${item.YYYY},
+								</if>
+								<if test="energy2 != null and energy2 != ''">
+									SUM(DECODE(A.ENERGY_TYPE, '지역난방', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.ENERGY_USE, 0), 0), 0)) AS H_TOE_${item.YYYY},
+									SUM(DECODE(A.ENERGY_TYPE, '지역난방', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.TCO2EQ, 0), 0), 0)) AS H_TCO2EQ_${item.YYYY},
+								</if>
+							</foreach>
+							SUM(NVL(A.ENERGY_USE, 0)) AS TOT_ENERGY_USE
+						FROM
+							TEMP_BLD_PURPS A
+						GROUP BY
+							A.MAIN_PURPS_NM
+						ORDER BY TOT_ENERGY_USE DESC
+					</when>
+					<otherwise>				
+						SELECT
+							A.MAIN_PURPS_NM,
+							<foreach collection="yearList" item="item">
+								<if test="energy0 != null and energy0 != ''">
+									SUM(NVL(B.E_TOE_${item.YYYY}, 0)) AS E_TOE_${item.YYYY},
+									SUM(NVL(B.E_TCO2EQ_${item.YYYY}, 0)) AS E_TCO2EQ_${item.YYYY},
+								</if>
+								<if test="energy2 != null and energy2 != ''">
+									SUM(NVL(B.G_TOE_${item.YYYY}, 0)) AS G_TOE_${item.YYYY},
+									SUM(NVL(B.G_TCO2EQ_${item.YYYY}, 0)) AS G_TCO2EQ_${item.YYYY},
+								</if>
+								<if test="energy1 != null and energy1 != ''">
+									SUM(NVL(B.H_TOE_${item.YYYY}, 0)) AS H_TOE_${item.YYYY},
+									SUM(NVL(B.H_TCO2EQ_${item.YYYY}, 0)) AS H_TCO2EQ_${item.YYYY},
+								</if>
+							</foreach>
+							SUM(NVL(B.TOT_ENERGY_USE, 0)) AS TOT_ENERGY_USE
+						FROM
+							(
+							SELECT
+								A.MGM_BLD_PK,
+								A.MAIN_PURPS_NM,
+								A.MAIN_PURPS_CD,
+								A.TOTAREA_SUM,
+								A.USEAPR_DAY
+							FROM
+								ARCH_MAIN_LEDGER_RENEW A
+							WHERE
+								1 = 1
+								<if test="util != null and util != ''">
+							  		AND A.MAIN_PURPS_CD IN <foreach collection="utilList" item="item" open="(" close=")" separator=",">#{item}</foreach>  /*용도*/
+								</if>
+								<if test="start_totarea != null and start_totarea != ''">
+									AND A.TOTAREA_SUM BETWEEN #{start_totarea} AND #{end_totarea}
+									<!-- <choose>
+										<when test='totarea == "1"'>
+											AND A.TOTAREA_SUM &lt; 500
+										</when>
+										<when test='totarea == "2"'>
+											AND A.TOTAREA_SUM >= 500 AND A.TOTAREA &lt; 1000
+										</when>
+										<when test='totarea == "3"'>
+											AND A.TOTAREA_SUM >= 1000 AND A.TOTAREA &lt; 2000
+										</when>
+										<when test='totarea == "4"'>
+											AND A.TOTAREA_SUM >= 2000 AND A.TOTAREA &lt; 5000
+										</when>
+										<when test='totarea == "5"'>
+											AND A.TOTAREA_SUM >= 5000 AND A.TOTAREA &lt; 10000
+										</when>
+										<when test='totarea == "6"'>
+											AND A.TOTAREA_SUM >= 10000
+										</when>
+									</choose> -->
+								</if>
+								<if test="start_permission != null and start_permission != ''">
+									AND TRUNC((SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) / 365.254) BETWEEN #{start_permission} AND #{end_permission}
+									<!-- <choose>
+										<when test='permission == "4"'>
+															            AND TRUNC(SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) >= 10950
+															         </when>
+															         <when test='permission == "3"'>
+															            AND TRUNC(SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) BETWEEN 7300 AND 10949
+															         </when>
+															         <when test='permission == "2"'>
+															            AND TRUNC(SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) BETWEEN 3650 AND 7299
+															         </when>
+															         <when test='permission == "1"'>
+															            AND TRUNC(SYSDATE - TO_DATE(A.USEAPR_DAY, 'YYYYMMDD')) BETWEEN 0 AND 3649
+															         </when>
+															    </choose> -->
+						         </if>
+						) A,
+							(
+							SELECT
+								A.MGM_BLD_PK,
+								<foreach collection="yearList" item="item">
+									<if test="energy0 != null and energy0 != ''">
+										MAX(DECODE(A.ENERGY_TYPE, '전기', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.ENERGY_USE, 0), 0), 0)) AS E_TOE_${item.YYYY},
+										MAX(DECODE(A.ENERGY_TYPE, '전기', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.TCO2EQ, 0), 0), 0)) AS E_TCO2EQ_${item.YYYY},
+									</if>
+									<if test="energy1 != null and energy1 != ''">
+										MAX(DECODE(A.ENERGY_TYPE, '가스', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.ENERGY_USE, 0), 0), 0)) AS G_TOE_${item.YYYY},
+										MAX(DECODE(A.ENERGY_TYPE, '가스', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.TCO2EQ, 0), 0), 0)) AS G_TCO2EQ_${item.YYYY},
+									</if>
+									<if test="energy2 != null and energy2 != ''">
+										MAX(DECODE(A.ENERGY_TYPE, '지역난방', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.ENERGY_USE, 0), 0), 0)) AS H_TOE_${item.YYYY},
+										MAX(DECODE(A.ENERGY_TYPE, '지역난방', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.TCO2EQ, 0), 0), 0)) AS H_TCO2EQ_${item.YYYY},
+									</if>
+								</foreach>
+								SUM(NVL(A.ENERGY_USE, 0)) AS TOT_ENERGY_USE
+							FROM
+								ENERGY_LEDGER_RENEW A
+							WHERE
+								1 = 1
+								AND A.ENERGY_TYPE IN <foreach collection="energyList" item="item" open="(" close=")" separator=",">#{item}</foreach>
+								<if test="acu != null and acu != ''">
+									<choose>
+										<when test='acu == "1"'>
+											<if test="start_year != null and start_year != '' and end_year != null and end_year != ''">
+											  	AND A.YEAR BETWEEN #{start_year} AND #{end_year} /*조회기간(년)*/
+											</if>			
+										</when>
+										<when test='acu == "2"'>
+											<if test="start_year != null and start_year != ''">
+											  	AND A.YEAR = #{start_year} /*조회기간(년)*/
+											  	AND A.MONTH BETWEEN #{start_month} AND #{end_month} /*조회기간(월)*/
+											</if>			
+										</when>
+									</choose>
+								</if>
+							GROUP BY
+								A.MGM_BLD_PK) B
+						WHERE
+							A.MGM_BLD_PK = B.MGM_BLD_PK(+)
+						GROUP BY
+							A.MAIN_PURPS_NM
+						ORDER BY
+							TOT_ENERGY_USE DESC
+					</otherwise>
+				</choose>
+			</otherwise>
+		</choose>
+	</select>	
+	
+	<select id="stat002_search" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT
+			A.SIGUNGU_NM,
+			A.BJDONG_NM,
+			<foreach collection="yearList" item="item">
+					<if test="energy0 != null and energy0 != ''">
+						SUM(DECODE(A.ENERGY_TYPE, '전기', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.ENERGY_USE, 0), 0), 0)) AS E_TOE_${item.YYYY},
+						SUM(DECODE(A.ENERGY_TYPE, '전기', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.TCO2EQ, 0), 0), 0)) AS E_TCO2EQ_${item.YYYY},
+					</if>
+					<if test="energy1 != null and energy1 != ''">
+						SUM(DECODE(A.ENERGY_TYPE, '가스', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.ENERGY_USE, 0), 0), 0)) AS G_TOE_${item.YYYY},
+						SUM(DECODE(A.ENERGY_TYPE, '가스', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.TCO2EQ, 0), 0), 0)) AS G_TCO2EQ_${item.YYYY},
+					</if>
+					<if test="energy2 != null and energy2 != ''">
+						SUM(DECODE(A.ENERGY_TYPE, '지역난방', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.ENERGY_USE, 0), 0), 0)) AS H_TOE_${item.YYYY},
+						SUM(DECODE(A.ENERGY_TYPE, '지역난방', DECODE(<choose><when test='acu == 1'>A.YEAR</when><when test='acu == 2'>A.MONTH</when></choose>, #{item.YYYY}, NVL(A.TCO2EQ, 0), 0), 0)) AS H_TCO2EQ_${item.YYYY},
+					</if>
+			</foreach>
+			SUM(NVL(A.ENERGY_USE, 0)) AS TOT_ENERGY_USE
+		FROM
+			BLD_${sigungu} A
+		WHERE
+			1 = 1			
+			<if test="bjdong != null and bjdong != ''">
+			AND A.ENERGY_TYPE IN <foreach collection="energyList" item="item" open="(" close=")" separator=",">#{item}</foreach> 
+			</if>
+			<if test="acu != null and acu != ''">
+				<choose>
+					<when test='acu == "1"'>
+						<if test="start_year != null and start_year != '' and end_year != null and end_year != ''">
+						  	AND A.YEAR BETWEEN #{start_year} AND #{end_year} /*조회기간(년)*/
+						</if>			
+					</when>
+					<when test='acu == "2"'>
+						<if test="start_year != null and start_year != ''">
+						  	AND A.YEAR = #{start_year} /*조회기간(년)*/
+						  	AND A.MONTH BETWEEN #{start_month} AND #{end_month} /*조회기간(월)*/
+						</if>			
+					</when>
+				</choose>
+			</if>
+			<if test="bjdong != null and bjdong != ''">
+		  		AND A.BJDONG_NM IN <foreach collection="bjdongList" item="item" open="(" close=")" separator=",">#{item}</foreach>  /*법정동*/
+			</if>
+		GROUP BY
+			A.SIGUNGU_NM,
+			A.BJDONG_NM
+		ORDER BY
+			TOT_ENERGY_USE DESC
+		
+	</select>	
+
+	<select id="stat003_search" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT A.ID_BLD_GOAL_LIST ,
+		       <foreach collection="yearList" item="item">
+		        NVL(MAX(DECODE(  B.C_YEAR , #{item.YYYY}, B.N_TCO2_M3  )),0) AS TOE_${item.YYYY},
+       			NVL(MAX(DECODE(  B.C_YEAR , #{item.YYYY}, B.N_TCO2_YEAR )),0) AS TCO2EQ_${item.YYYY},
+       			NVL(MAX(DECODE(  B.C_YEAR , #{item.YYYY}, B.REDUCTION )),0) AS REDUCTION_${item.YYYY},
+		       </foreach>
+		       A.CONS_NM, 
+		       A.JUSO, 
+		       A.PROP_OFFICER,
+				NVL(A.COMPL_YEAR, ' ') AS COMPL_YEAR,
+				NVL(A.AREA, ' ') AS AREA,
+				NVL(A.USE_INT, ' ') AS USE_INT,
+				NVL((SELECT S_DESC FROM T_CODE WHERE S_CAT = 'USE_INT' AND S_CD = A.USE_INT), ' ') AS USE_INT_NM
+		FROM BLD_GOAL_LIST A 
+			LEFT OUTER JOIN BLD_YEAR_GOAL B ON A.ID_BLD_GOAL_LIST  = B.ID_BLD_GOAL_LIST AND C_YEAR BETWEEN #{start_year} AND #{end_year}
+			WHERE A.C_DEL_YN = 'N'
+			GROUP BY A.ID_BLD_GOAL_LIST ,
+				       A.CONS_NM, 
+				       A.JUSO, 
+				       A.PROP_OFFICER,
+						A.COMPL_YEAR,
+						A.AREA,
+						A.USE_INT
+			ORDER BY A.ID_BLD_GOAL_LIST
+	</select>
+	
+	<select id="stat003_getBuildingGoalId" parameterType="java.util.HashMap" resultType="Integer">
+		SELECT NVL(MAX(ID_BLD_GOAL_LIST) + 1 ,1) FROM BLD_GOAL_LIST
+	</select>
+	
+	<select id="stat003_getYearGoalId" parameterType="java.util.HashMap" resultType="Integer">
+		SELECT NVL(MAX(ID_BLD_YEAR_GOAL)+1,1) FROM BLD_YEAR_GOAL
+	</select>
+
+	<select id="stat003_getBuildingList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		<!-- SELECT
+			DISTINCT A.MGM_BLD_PK,
+			A.PROP_CD,
+			A.TURN_CD,
+			A.CONS_NM,
+			A.JUSO,
+			A.PROP_OFFICER,
+			CASE
+				WHEN B.CONS_NM IS NOT NULL THEN 'Y'
+				ELSE 'N'
+			END ALREADY,
+			C.USEAPR_DAY,
+			C.MAIN_PURPS_CD ,
+			C.MAIN_PURPS_NM ,
+			C.TOTAREA
+		FROM
+			SEOUL_OWN_BUILDING A ,
+			BLD_GOAL_LIST B,
+			SEOUL_TARGET C
+		WHERE
+			A.CONS_NM = B.CONS_NM(+)
+			AND A.MGM_BLD_PK = C.MGM_BLD_PK
+			AND C.SECOND_TARGET = 'Y'
+			AND A.CONS_NM NOT IN (
+				SELECT
+					CONS_NM
+				FROM
+					BLD_GOAL_LIST) -->
+		SELECT
+			MGM_BLD_PK,
+			CONS_NM,
+			JUSO,
+			PROP_OFFICER,
+			CASE
+				WHEN CONS_NM IS NOT NULL THEN 'Y'
+				ELSE 'N'
+			END ALREADY,
+			USEAPR_DAY,
+			MAIN_PURPS_CD,
+			MAIN_PURPS_NM,
+			TOTAREA
+		FROM
+			SEOUL_OWN_TARGET_2
+		WHERE 1 = 1
+		  AND CONS_NM NOT IN (
+			SELECT
+				CONS_NM
+			FROM
+				BLD_GOAL_LIST)
+			<if test="building_name != null and building_name !=''">
+				AND CONS_NM LIKE '%' || #{building_name} || '%' 
+			</if> 
+			<if test="building_juso != null and building_juso !=''">
+				AND JUSO LIKE '%' || #{building_juso} || '%' 
+			</if> 
+			<if test="building_prop != null and building_prop !=''">
+				AND PROP_OFFICER LIKE '%' || #{building_prop} || '%' 
+			</if>
+	 </select>
+
+	<insert id="stat003_saveBuilding" parameterType="java.util.HashMap" >
+		MERGE INTO BLD_GOAL_LIST 
+			USING DUAL 
+		ON (
+			ID_BLD_GOAL_LIST = #{goalId}
+		)
+		WHEN MATCHED THEN 
+			UPDATE SET 
+				S_MOD_ID = #{S_REG_ID},
+				D_MOD_DATE = to_date(sysdate,'yyyy-mm-dd hh24:mi')
+		WHEN NOT MATCHED THEN
+		INSERT (ID_BLD_GOAL_LIST,
+				CONS_NM,
+				JUSO,
+				PROP_OFFICER,
+				COMPL_YEAR, 
+				AREA, 
+				USE_INT,
+				S_REG_ID,
+				D_REG_DATE,
+				C_DEL_YN)
+		VALUES (
+				#{goalId},
+				#{buildingName},
+				#{buildingJuso},
+				#{buildingProp},
+				#{buildingYear},
+				#{buildingTotarea},
+				#{buildingPurps},
+				#{S_REG_ID},
+				to_date(sysdate,'yyyy-mm-dd hh24:mi'),
+				'N'
+		 )
+	</insert>
+
+	<insert id="stat003_saveBuildingYear" parameterType="java.util.HashMap"  >
+		MERGE INTO BLD_YEAR_GOAL 
+			USING DUAL 
+		ON (
+			ID_BLD_GOAL_LIST = #{goalId}
+		AND C_YEAR = #{year}
+		)
+		WHEN MATCHED THEN 
+			UPDATE SET 
+				N_TCO2_M3 = #{toe},
+				N_TCO2_YEAR = #{tco2eq},
+				REDUCTION = #{reduction}
+		WHEN NOT MATCHED THEN
+		INSERT ( ID_BLD_YEAR_GOAL,
+				ID_BLD_GOAL_LIST,
+				C_YEAR,
+				N_TCO2_M3,
+				N_TCO2_YEAR,
+				REDUCTION
+		)
+		VALUES (
+				#{yearId},
+				#{goalId},
+				#{year},
+				#{toe},
+				#{tco2eq},
+				#{reduction}
+		)
+	</insert>
+
+	<delete id="stat003_deleteBuilding" parameterType="hashMap">
+		DELETE FROM BLD_GOAL_LIST
+			WHERE ID_BLD_GOAL_LIST = #{ID_BLD_GOAL_LIST}
+	</delete>
+
+</mapper>

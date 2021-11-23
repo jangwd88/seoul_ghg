@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+  <script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
+  <style type="text/css">
+    .input-changed { /* copy from [.has-error .form-control] */
+      border-color: #a94442;
+      -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+              box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+    }
+    .td-v {
+      font-weight: 600;
+    }
+    .td-c {
+      color: #777;
+    }
+  </style>
+  <script type="text/javascript">
+      var savedMode; // current or saved
+      var $configTable;
+      var $editList;
+      var $fontUploadDialog, fontDirIdx = 3; // fontDir의 인덱스와 일치
+
+      // 처리할 항목의 이름(속성명을 그대로 사용, 서버와 동기화-순서는 무관)
+      var editItems = [
+          "homeDir","tempDir","viewerPath","fontDir",
+          "localeLang","schedulerTimeZone","enableAdminConsole",
+          "parameterDecoder.defaultURIEncoding","parameterDecoder.useRequest",
+          "AES128parameter"
+      ];
+      var editComments = [ //editItems와 순서 동기화 (각각은 nullable)
+          "AI서버 홈디렉토리 ( /Context내부경로 or file:절대경로 형식)",
+          "임시화일 디렉토리 [ 미지정(WAS temp) or /Context내부경로 or file:절대경로 ]",
+          "AI뷰어 리소스 디렉토리 ( /Context내부경로 형식)",
+          "폰트 디렉토리 [ 미지정(homeDir/Fonts) or /Context내부경로 or file:절대경로 ]",
+          "폰트명을 표시할 언어 (ko, en, ja 등, 미지정시 서버 locale에 따름)",
+          "스케줄링 시간에 적용할 타임존 ( GMT+/-hh:mm 형식 )",
+          "(this)관리콘솔을 사용가능하게 할지 여부 (true or false)",
+          "보고서호출파라미터의 디코딩에 적용할 기본 인코딩명 (UTF-8, EUC-KR 등)",
+          "보고서호출파라미터를 Request객체로 처리할지 여부 (false or true)",
+          "암호화된 파라미터를 AI뷰어에서 유지하여 사용할지 여부 (true or false)"
+      ];
+
+      // DOM구성완료후 request와 callback을 직접처리(로딩순서 문제로 메뉴에서 불가)
+      $(function () {
+          var docURL = document.URL;
+          savedMode = (docURL.substring(docURL.indexOf("#", 0)+1) == "saved");
+          var pageTitle = $(document.getElementById("pageTitle"));
+          if (savedMode) {
+              pageTitle.text("저장된 환경변수 (설정항목)");
+          } else {
+              pageTitle.text("운영중인 환경변수 (설정항목)");
+          }
+
+          $configTable = $(document.getElementById("configTable"));
+          $fontUploadDialog = $(document.getElementById("fontUploadDialog"));
+
+          var mode = savedMode? "saved" : "current";
+          parent.simpleRequest.setTask("server", "environment", "list");
+          parent.simpleRequest.doRequest("GET", {mode:mode}, dataLoaded, 30000, "text");
+      });
+
+      function dataLoaded(result, jqXHR) {
+          // 저장본이 있는지 여부 -> 이경우 현재본은 편집불허
+          var hasSavedConfig = ("true" == jqXHR.getResponseHeader("AIServer-HasSavedConfig"));
+          if (savedMode && !hasSavedConfig) { // empty body
+              parent.showMessage("수정되어 저장된 내용이 없습니다.<br>" +
+                                 "&lt;운영중인 환경변수&gt; 메뉴에서 수정하세요.",
+                                 false, true
+              );
+              return;
+          }
+
+          $configTable.css("display", "none");
+
+          var readOnly = (hasSavedConfig && !savedMode); // 이 조합만 편집불허
+          var configPath = jqXHR.getResponseHeader("AIServer-ConfigPath");
+          if (configPath != null) {
+              var eleConfigPath = document.getElementById("configPath");
+              $(eleConfigPath).text("설정화일: " + window.decodeURIComponent(configPath));
+              eleConfigPath.style.display = "inline";
+          }
+          var editMsg = document.getElementById("editMessage");
+          if (readOnly) {
+              $(editMsg).text("읽기전용 ::: <저장된 환경변수> 메뉴에서 수정가능");
+          } else {
+              $(editMsg).text("수정가능 ::: AI서버 재기동시 변경된 설정이 적용됨");
+          }
+          editMsg.style.display = "inline";
+
+          var resObj = $.parseJSON(result);
+          for (var i = 0; i < editItems.length; i++) {
+              var item = editItems[i]; // name
+              var comment = editComments[i] || "";
+              var row = "<tr><td class='td-v'>" + item + "</td><td>" +
+                        "<input type='text' class='edit form-control' ";
+              if (readOnly) row += "readonly ";
+              row += "name='" + item + "' value='" + parent.escapeValue(resObj[item]) +
+                     "'></td><td class='td-c'>" + comment;
+              if (i == fontDirIdx) {
+                  row += "<div><button onclick='showFontUploadDialog()' type='button' class='btn btn-success btn-xs'>폰트 업로드</button></div>";
+              }
+              row += "</td></tr>";
+              $configTable.append(row);
+          }
+
+          var others = resObj["others"];
+          for (var k in others) {
+              row = "<tr><td class='td-v'>" + k + "</td><td>" +
+                    "<input type='text' class='edit form-control' ";
+              if (readOnly) row += "readonly ";
+              row += "name='" + k + "' value='" + parent.escapeValue(others[k]) +
+                     "'></td><td class='td-c'></td></tr>";
+              $configTable.append(row);
+          }
+
+          if (!readOnly) {
+              $configTable.append(
+                  "<tr style='height:55px;'><td style='color:#2e6da4; font-weight:600; vertical-align:middle;'>설정항목 추가</td>" +
+                  "<td style='vertical-align:middle;'><input id='userItem' type='text' class='form-control' placeholder='항목(변수)명'></td>" +
+                  "<td style='vertical-align:middle;'><input id='userValue' type='text' style='width:260px;' class='form-control' placeholder='값'></td></tr>"
+              );
+
+              $configTable.append(
+                  "<tr style='height:70px;'><td colspan='2' style='text-align:right; vertical-align:bottom;'>" +
+                  "<button type='button' onclick='saveChange();' class='btn btn-primary'>Save</button>" +
+                  "</td><td></td></tr>"
+              );
+
+              $editList = $(".edit");
+              $editList.change(function () { // 값변경시 처리
+                  var me = $(this);
+                  //me.data("X", true); // 변경되었다는 마킹의 의미만 가짐
+                  if (!me.hasClass("input-changed")) {
+                      me.addClass("input-changed"); // 변경 시각효과 추가
+                  }
+              });
+          }
+
+          $configTable.css("display", "table");
+      }
+
+      function saveChange() {
+          var paramObj = {}; // 변경된 항목만 담음
+          var changed = false;
+          $editList.each(function() {
+              //if ($.hasData(this)) { // 값이 변경되었음 (항상 true -> 사용않음)
+              if ($(this).hasClass("input-changed")) {
+                  paramObj[this.name] = this.value;
+                  changed = true;
+              }
+          });
+
+          var userItemEntered = addUserItem(paramObj);
+          if (!userItemEntered && !changed) {
+              parent.showMessage("변경된 내용이 없습니다.", true, false);
+              return;
+          }
+
+          // todo 항목별 입력값 순회체크, paramObj["name"]으로 체크
+          var msg = "변경된 내용을 저장하시겠습니까?\n" +
+                    "저장된 설정은 AI서버가 재기동될때 적용됩니다.";
+          if (window.confirm(msg)) {
+              parent.simpleRequest.setTask("server", "environment", "update");
+              parent.simpleRequest.doRequest("POST", paramObj, onSaved, 50000, "text");
+          }
+      }
+
+      function addUserItem(paramObj) {
+          var k = $.trim(document.getElementById("userItem").value);
+          if (k) {
+              var v = $.trim(document.getElementById("userValue").value);
+              if (v) {
+                  paramObj[k] = v;
+                  return true;
+              }
+          }
+
+          return false;
+      }
+
+      function onSaved(content) {
+          window.setTimeout(function() { // report_list의 onDeleted() 참조
+              window.alert("저장되었습니다.");
+              parent.leftFrame.loadEnvPage('saved');
+          }, 300); // 반복실행시 여전히 chrome에서 비정상작동하는 경우가 있음
+      }
+
+      function showFontUploadDialog() {
+          document.getElementById("fontForm").reset();
+          $fontUploadDialog.modal("show");
+      }
+
+      function uploadFontFiles() {
+          var form = document.getElementById("fontForm");
+          if (!form.f1.value && !form.f2.value && !form.f3.value) {
+              alert("폰트화일을 선택하세요.");
+              return;
+          }
+
+          form.target.value = savedMode? "saved" : "current";
+          var msg = "업로드된 폰트는 AI서버의 재기동시 반영됩니다.\n" +
+                    "폰트화일을 업로드하시겠습니까?";
+          if (window.confirm(msg)) {
+              parent.mulitPartRequest.setTask("server", "update", "font");
+              parent.mulitPartRequest.doRequest(form, onFontUploaded, 40000, "text");
+          }
+      }
+
+      function onFontUploaded(content) {
+          $fontUploadDialog.modal("hide");
+          parent.showMessage("폰트화일이 업로드되었습니다.", true, false);
+      }
+  </script>
+</head>
+<body>
+
+  <div class="page-header" style="margin:20px 10px;">
+    <h1><small id="pageTitle"></small></h1>
+    <span id="configPath" style="display:none;"></span>
+    <div><span id="editMessage" class="text-danger" style="display:none; font-size:16px;"></span></div>
+  </div>
+
+  <div style="margin:10px;">
+    <table id="configTable" class="table table-hover">
+      <thead><tr><th>항 목</th><th>설 정</th><th>비 고</th></tr></thead>
+    </table>
+  </div>
+
+  <div id="fontUploadDialog" class="modal" data-backdrop="false" tabindex="-1">
+    <div class="modal-dialog" style="position:fixed; top:50%; left:50%; margin-top:-80px; margin-left:-290px; width:520px;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" title="Close"><span class="glyphicon glyphicon-remove"></span></button>
+          <h4 class="modal-title">폰트화일 업로드</h4>
+        </div>
+        <div class="modal-body">
+          <form id="fontForm" method="POST">
+            <table>
+              <colgroup>
+                <col style="width:70px;">
+                <col style="width:430px;">
+              </colgroup>
+              <tr style="height:30px;"><td><label>TTF/TTC</label></td><td><input name="f1" type="file" class="form-control" accept=".ttf, .ttc"></td></tr>
+              <tr style="height:30px;"><td><label>TTF/TTC</label></td><td><input name="f2" type="file" class="form-control" accept=".ttf, .ttc"></td></tr>
+              <tr style="height:30px;"><td><label>기타화일</label></td><td><input name="f3" type="file" class="form-control"></td></tr>
+            </table>
+            <input type="hidden" name="target">
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button onclick="uploadFontFiles()" type="button" class="btn btn-primary">OK</button>
+          <button type="button" class="btn btn-primary" data-dismiss="modal">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

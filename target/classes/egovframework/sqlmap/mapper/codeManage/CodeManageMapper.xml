@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="codeManageMapper">
+
+	<select id="masterCodeData" parameterType="hashMap" resultType="hashMap">
+		SELECT 
+			ID_CAT,
+			S_CAT,
+			NVL(S_CAT_DESC, ' ') AS S_CAT_DESC,
+			NVL(S_CAT_EXP, ' ') AS S_CAT_EXP,
+			S_USE_YN,
+			S_EDIT_YN,
+			C_DEL_YN 
+		FROM T_CAT
+		WHERE 1=1
+		<if test="code_nm != null and code_nm !=''">
+			AND (S_CAT LIKE '%' || #{code_nm} || '%'
+			  or S_CAT_DESC LIKE '%' || #{code_nm} || '%'
+			  or S_CAT_EXP LIKE '%' || #{code_nm} || '%')
+		</if>
+		ORDER BY S_CAT
+	</select>
+	
+	<select id="detailCodeData" parameterType="hashMap" resultType="hashMap">
+	SELECT
+		ID_CODE,
+		S_CAT,
+		NVL(S_CD, ' ') AS S_CD,
+		NVL(S_DESC, ' ') AS S_DESC,
+		NVL(S_VAL, ' ') AS S_VAL,
+		NVL(N_ORDER, ' ') AS N_ORDER,
+		C_DEL_YN
+	FROM T_CODE
+	WHERE S_CAT = #{S_CAT}
+	ORDER BY N_ORDER
+	</select>
+	<insert id="addNUpdateCodeMaster" parameterType="hashMap">
+		MERGE INTO T_CAT A
+			USING DUAL  ON (A.ID_CAT = #{ID_CAT})
+		 WHEN MATCHED THEN
+		 	UPDATE SET 
+		 		A.S_CAT = #{S_CAT},
+		 		A.S_CAT_DESC = #{S_CAT_DESC},
+		 		A.S_CAT_EXP = #{S_CAT_EXP},
+		 		A.S_USE_YN = #{S_USE_YN},
+		 		A.S_EDIT_YN = #{S_EDIT_YN},
+		 		A.C_DEL_YN = #{C_DEL_YN},
+		 		A.D_MOD_DATE = SYSDATE
+		 WHEN NOT MATCHED THEN
+		 	INSERT (A.ID_CAT,
+				 	A.S_CAT,
+				 	A.S_CAT_DESC,
+				 	A.S_CAT_EXP,
+				 	A.S_USE_YN,
+				 	A.S_EDIT_YN,
+				 	A.C_DEL_YN,
+				 	A.D_REG_DATE)
+		 	VALUES (
+		 		    (SELECT  NVL(MAX(ID_CAT),0) + 1 FROM T_CAT),
+			 		#{S_CAT},
+			 		#{S_CAT_DESC},
+			 		#{S_CAT_EXP},
+			 		#{S_USE_YN},
+			 		#{S_EDIT_YN},
+			 		#{C_DEL_YN},
+			 		SYSDATE)
+	</insert>
+	
+	<insert id="addNUpdateCodeDetail" parameterType="hashMap">
+		MERGE INTO T_CODE A
+			USING DUAL  ON (A.ID_CODE = #{ID_CODE})
+		 WHEN MATCHED THEN
+		 	UPDATE SET 
+		 		A.S_CAT = #{S_CAT},
+		 		A.S_CD = #{S_CD},
+		 		A.S_DESC = #{S_DESC},
+		 		A.S_VAL = #{S_VAL},
+		 		A.N_ORDER = #{N_ORDER},
+		 		A.C_DEL_YN = #{C_DEL_YN},
+		 		A.D_MOD_DATE = SYSDATE
+		 WHEN NOT MATCHED THEN
+		 	INSERT (A.ID_CODE,
+				 	A.S_CAT,
+				 	A.S_CD,
+				 	A.S_DESC,
+				 	A.S_VAL,
+				 	A.N_ORDER,
+				 	A.C_DEL_YN,
+				 	A.D_REG_DATE)
+		 	VALUES (
+		 		    (SELECT  NVL(MAX(ID_CODE),0) + 1 FROM T_CODE),
+			 		#{S_CAT},
+			 		#{S_CD},
+			 		#{S_DESC},
+			 		#{S_VAL},
+			 		#{N_ORDER},
+			 		#{C_DEL_YN},
+			 		SYSDATE)
+	</insert>
+	
+	<delete id="deleteCodeDetail" parameterType="hashMap">
+		DELETE FROM T_CODE WHERE S_CAT = (SELECT S_CAT FROM T_CAT WHERE ID_CAT = #{ID_CAT})
+	</delete>
+	
+	<delete id="deleteCodeMaster" parameterType="hashMap">
+		DELETE FROM T_CAT WHERE ID_CAT = #{ID_CAT}
+	</delete>
+
+	<delete id="deleteCodeDetail2" parameterType="hashMap">
+		DELETE FROM T_CODE WHERE ID_CODE = #{ID_CODE}
+	</delete>
+
+</mapper>

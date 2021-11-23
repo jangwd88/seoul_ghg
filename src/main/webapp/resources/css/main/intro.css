@@ -1,0 +1,182 @@
+@charset "utf-8";
+
+body {
+	font-family: "SeoulNamsan", sans-serif !important;
+}
+
+/* ******************** 데스크탑 (992~) ******************** */
+@media screen and (min-width: 992px) , print {
+	.introPage {
+		background-image: url(/resources/images/seoul_background.jpg);
+		background-repeat: no-repeat;
+/* 		background-size: 100% */
+		background-size : cover;
+	}
+	.wrap {
+		position: absolute;
+		left: 50%;
+		top: 460px;
+		transform: translate(-50%, -50%);
+		width: 950px;
+	}
+	.link {
+		padding: 50px;
+		padding-left: 30px;
+	}
+	.d1 {
+		box-sizing: border-box;
+		float: left;
+		width: 450px;
+		padding: 30px 0;
+		text-align: center;
+		padding: 30px 0;
+		background-color: #fff;
+		border-radius: 60px 10px 60px 10px;
+		overflow: hidden;
+		box-shadow: 20px 20px 10px rgba(0, 0, 0, .2);
+		text-align: center;
+	}
+	.d2 {
+		display: inline-block box-sizing: border-box;
+		float: left;
+		margin-left: 5%;
+		width: 450px;
+		padding: 30px 0;
+		text-align: center;
+		overflow: hidden;
+		background-color: #fff;
+		border-radius: 60px 10px 60px 10px;
+		box-shadow: 20px 20px 10px rgba(0, 0, 0, .2);
+	}
+	.arch_logo {
+		display: inline-block;
+		width: 450px;
+		height: 300px;
+		background-size: cover;
+		background-repeat: no-repeat;
+		background-position: center;
+		padding: 0px;
+		background-image: url(/resources/images/arch_main.jpg);
+	}
+	.inventory_logo {
+		display: inline-block;
+		width: 450px;
+		height: 300px;
+		background-size: cover;
+		background-repeat: no-repeat;
+		background-position: center;
+		padding: 0px;
+		background-image: url(/resources/images/inventory_main.jpg);
+	}
+	ul {
+		width: 400px;
+		list-style: none;
+		height: 150px;
+		padding-left: 0px;
+		display: inline-block;
+		text-align: center;
+	}
+	li {
+		float: left;
+		padding: 5px;
+		display: inline-block;
+	}
+	li a {
+		display: block;
+		width: 170px;
+		height: 40px;
+		border: 1px solid #ddd;
+		border-radius: 25px;
+		border-width: 2px;
+		color: #555;
+		font-size: 17px;
+		text-align: center;
+		text-decoration: none;
+		margin: auto;
+		line-height: 40px;
+		font-weight: 300;
+	}
+	.arch>li a:hover {
+		background: #4b7cdf;
+		color: #fff;
+	}
+	.inventory>li a:hover {
+		background: #00a47a;
+		color: #fff;
+	}
+	.master_button {
+		border: 1px solid #ddd;
+		border-radius: 25px;
+		border-width: 2px;
+		color: #555;
+		font-size: 17px;
+		text-align: center;
+		text-decoration: none;
+		margin: auto;
+		line-height: 40px;
+		font-weight: 300;
+		font-style: "SeoulNamsan"
+	}
+	.login-btn-wrap {
+		display: flex;
+		flex-direction: column;
+		align-items: center;;
+	}
+	.login-btn-wrap .login-btn {
+		width: 95px;
+		height: 35px;
+		color: white;
+		border: 0;
+		border-radius: 4px;
+		background: rgb(105, 163, 255);
+		background: linear-gradient(162deg, rgba(105, 163, 255, 1) 0%,
+			rgba(43, 125, 254, 1) 50%, rgba(43, 125, 254, 1) 100%);
+	}
+	.login-btn-wrap a {
+		margin-top: 10px;
+		text-decoration: none;
+		font-size: 11px;
+		color: gray;
+	}
+	@font-face {
+		font-family: "SeoulNamsan";
+		src: url("/resources/fonts/seoul_namsan/SeoulNamsanB.woff2")
+			format("woff2"),
+			url("/resources/fonts/seoul_namsan/SeoulNamsanB.woff") format("woff"),
+			url("/resources/fonts/seoul_namsan/SeoulNamsanB.otf")
+			format("opentype");
+		font-style: normal;
+		font-weight: 700;
+	}
+	@font-face {
+		font-family: "SeoulNamsan";
+		src: url("/resources/fonts/seoul_namsan/SeoulNamsanEB.woff2")
+			format("woff2"),
+			url("/resources/fonts/seoul_namsan/SeoulNamsanEB.woff")
+			format("woff"),
+			url("/resources/fonts/seoul_namsan/SeoulNamsanEB.otf")
+			format("opentype");
+		font-style: normal;
+		font-weight: 800;
+	}
+	@font-face {
+		font-family: "SeoulNamsan";
+		src: url("/resources/fonts/seoul_namsan/SeoulNamsanL.woff2")
+			format("woff2"),
+			url("/resources/fonts/seoul_namsan/SeoulNamsanL.woff") format("woff"),
+			url("/resources/fonts/seoul_namsan/SeoulNamsanL.otf")
+			format("opentype");
+		font-style: normal;
+		font-weight: 300;
+	}
+	@font-face {
+		font-family: "SeoulNamsan";
+		src: url("/resources/fonts/seoul_namsan/SeoulNamsanM.woff2")
+			format("woff2"),
+			url("/resources/fonts/seoul_namsan/SeoulNamsanM.woff") format("woff"),
+			url("/resources/fonts/seoul_namsan/SeoulNamsanM.otf")
+			format("opentype");
+		font-style: normal;
+		font-weight: 400;
+	}
+}
