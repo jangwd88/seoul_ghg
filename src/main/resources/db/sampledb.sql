@@ -115,4 +115,5 @@ INSERT INTO SAMPLE VALUES('SAMPLE-00111','Runtime Environment','Integration Laye
 INSERT INTO SAMPLE VALUES('SAMPLE-00112','Runtime Environment','Integration Layer','Y','eGov')
 INSERT INTO SAMPLE VALUES('SAMPLE-00113','Runtime Environment','Integration Layer','Y','eGov')
 INSERT INTO SAMPLE VALUES('SAMPLE-00114','Runtime Environment','Integration Layer','Y','eGov')
+INSERT INTO SAMPLE VALUES('SAMPLE-00115','Runtime Environment','Integration Layer','Y','eGov')
 INSERT INTO IDS VALUES('SAMPLE',115)
