@@ -217,6 +217,18 @@
 					<artifactId>maven-pmd-plugin</artifactId>
 					<version>3.1</version>
 				</plugin>
+				
+				<!-- war manven plugin -->
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-pmd-plugin</artifactId>
+					<version>2.6</version>
+					<configuration>
+						<warsourcedirectory>src/main/webapp</warsourcedirectory>
+						<webxml>src/main/webapp/WEB_INF/web.xml</webxml>
+					</configuration>
+				</plugin>
+				
 			</plugins>
 		</pluginManagement>
 		<plugins>
